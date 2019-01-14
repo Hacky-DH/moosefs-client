@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/golang/glog"
 	"io"
 )
 
@@ -57,6 +56,10 @@ func PackCmd(cmd uint32, data ...interface{}) []byte {
 		switch v := d.(type) {
 		case string:
 			size += len(v)
+		case *string:
+			size += len(*v)
+		case int, *int, uint, *uint:
+			size += 4
 		default:
 			size += binary.Size(d)
 		}
@@ -69,10 +72,8 @@ func PackCmd(cmd uint32, data ...interface{}) []byte {
 
 func UnPackCmd(in []byte, out ...interface{}) (cmd uint32, err error) {
 	reader := bytes.NewReader(in)
-	glog.Info(reader.Len())
 	var size uint32
-	read(reader, &cmd)
-	read(reader, &size)
+	read(reader, &cmd, &size)
 	if int(size) != reader.Len() {
 		msg := fmt.Sprintf("cmd size %d not match with %d", size, reader.Len())
 		err = errors.New(msg)
