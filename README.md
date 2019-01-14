@@ -1,6 +1,6 @@
 # moosefs-client
 
-![Travis CI Build Status](https://api.travis-ci.org/Hacky-DH/moosefs-client.svg?branch=master)
+[![Build Status](https://travis-ci.com/Hacky-DH/moosefs-client.svg?branch=master)](https://travis-ci.com/Hacky-DH/moosefs-client)
 
 go client for [moosefs](https://github.com/moosefs/moosefs) version 3.0.103
 
