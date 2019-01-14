@@ -29,6 +29,16 @@ func Pack(data ...interface{}) []byte {
 			buf.Write(v)
 		case string:
 			buf.WriteString(v)
+		case *string:
+			buf.WriteString(*v)
+		case int:
+			write(buf, int32(v))
+		case *int:
+			write(buf, int32(*v))
+		case uint:
+			write(buf, uint32(v))
+		case *uint:
+			write(buf, uint32(*v))
 		default:
 			write(buf, v)
 		}

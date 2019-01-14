@@ -11,18 +11,34 @@ func init() {
 	flag.Parse()
 }
 
-func Test_glog(t *testing.T) {
+func TestGlog(t *testing.T) {
 	glog.Info("for test")
 }
 
-func Test_packString(t *testing.T) {
-	s := Pack("123", []byte("456"))
-	if string(s) != "123456" {
-		t.Error("error pack string")
+func TestPackString(t *testing.T) {
+	s := "456"
+	buf := Pack("123", &s)
+	if len(buf) != 6 || string(buf) != "123456" {
+		t.Error("error pack string", len(buf), string(buf))
 	}
 }
 
-func Test_pack(t *testing.T) {
+func TestPackInt(t *testing.T) {
+	s := Pack(4, 5, 6)
+	var t1, t2, t3 int32
+	UnPack(s, &t1, &t2, &t3)
+	if t1 != 4 {
+		t.Error("error unpack int", t1)
+	}
+	if t2 != 5 {
+		t.Error("error unpack int", t2)
+	}
+	if t3 != 6 {
+		t.Error("error unpack int", t3)
+	}
+}
+
+func TestPack(t *testing.T) {
 	s := Pack(uint8(1), uint16(2), uint32(3), uint64(4), "456")
 	var t1 uint8
 	var t2 uint16
@@ -47,7 +63,7 @@ func Test_pack(t *testing.T) {
 	}
 }
 
-func Test_packCmd(t *testing.T) {
+func TestPackCmd(t *testing.T) {
 	s := PackCmd(88, uint8(1), uint16(2), uint32(3), uint64(4), "456")
 	var t1 uint8
 	var t2 uint16
