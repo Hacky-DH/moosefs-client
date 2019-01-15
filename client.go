@@ -3,8 +3,6 @@ package mfscli
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
-	"fmt"
 	"io"
 )
 
@@ -50,8 +48,8 @@ func UnPack(in []byte, out ...interface{}) {
 	read(reader, out...)
 }
 
-func PackCmd(cmd uint32, data ...interface{}) []byte {
-	size := 0
+func PackCmd(cmd, id uint32, data ...interface{}) []byte {
+	size := 4
 	for _, d := range data {
 		switch v := d.(type) {
 		case string:
@@ -65,20 +63,7 @@ func PackCmd(cmd uint32, data ...interface{}) []byte {
 		}
 	}
 	args := make([]interface{}, 0)
-	args = append(args, cmd, uint32(size))
+	args = append(args, cmd, uint32(size), id)
 	args = append(args, data...)
 	return Pack(args...)
-}
-
-func UnPackCmd(in []byte, out ...interface{}) (cmd uint32, err error) {
-	reader := bytes.NewReader(in)
-	var size uint32
-	read(reader, &cmd, &size)
-	if int(size) != reader.Len() {
-		msg := fmt.Sprintf("cmd size %d not match with %d", size, reader.Len())
-		err = errors.New(msg)
-		return
-	}
-	read(reader, out...)
-	return
 }
