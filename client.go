@@ -48,8 +48,8 @@ func UnPack(in []byte, out ...interface{}) {
 	read(reader, out...)
 }
 
-func PackCmd(cmd, id uint32, data ...interface{}) []byte {
-	size := 4
+func PackCmd(cmd uint32, data ...interface{}) []byte {
+	size := 0
 	for _, d := range data {
 		switch v := d.(type) {
 		case string:
@@ -63,7 +63,7 @@ func PackCmd(cmd, id uint32, data ...interface{}) []byte {
 		}
 	}
 	args := make([]interface{}, 0)
-	args = append(args, cmd, uint32(size), id)
+	args = append(args, cmd, uint32(size))
 	args = append(args, data...)
 	return Pack(args...)
 }
