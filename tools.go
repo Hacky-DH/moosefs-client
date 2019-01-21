@@ -17,8 +17,8 @@ func (c *Client) MasterVersion() error {
 	var ver uint32
 	UnPack(buf, &ver)
 	c.SetVersion(ver)
-	if c.Version.LessThan(3, 0, 0) {
-		return fmt.Errorf("client only support mfsmaster version >= 3.0.0")
+	if c.Version.LessThan(3, 0, 9) {
+		return fmt.Errorf("client only support mfsmaster version >= 3.0.9")
 	}
 	glog.V(5).Infof("mfsmaster version %s", c.Version)
 	return nil
@@ -84,14 +84,9 @@ func (c *Client) UnPackQuota(buf []byte) *QuotaInfo {
 	q.size += 8
 	q.path = string(buf[q.size : q.size+int(leng)])
 	q.size += int(leng)
-	if c.Version.MoreThan(3, 0, 9) {
-		UnPack(buf[q.size:q.size+10], &q.graceperiod, &q.exceeded,
-			&q.qflags, &q.stimestamp)
-		q.size += 10
-	} else {
-		UnPack(buf[q.size:q.size+6], &q.exceeded, &q.qflags, &q.stimestamp)
-		q.size += 6
-	}
+	UnPack(buf[q.size:q.size+10], &q.graceperiod, &q.exceeded,
+		&q.qflags, &q.stimestamp)
+	q.size += 10
 	UnPack(buf[q.size:q.size+84], &q.sinodes, &q.slength, &q.ssize, &q.srealsize,
 		&q.hinodes, &q.hlength, &q.hsize, &q.hrealsize,
 		&q.currinodes, &q.currlength, &q.currsize, &q.currrealsize)
