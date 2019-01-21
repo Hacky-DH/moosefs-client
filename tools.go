@@ -75,7 +75,7 @@ func (info *QuotaInfo) Usage() (current, quota string, retio float64) {
 }
 
 func (c *Client) UnPackQuota(buf []byte) *QuotaInfo {
-	if len(buf) <= 98 {
+	if len(buf) <= 102 {
 		return nil
 	}
 	q := new(QuotaInfo)
@@ -84,13 +84,11 @@ func (c *Client) UnPackQuota(buf []byte) *QuotaInfo {
 	q.size += 8
 	q.path = string(buf[q.size : q.size+int(leng)])
 	q.size += int(leng)
-	UnPack(buf[q.size:q.size+10], &q.graceperiod, &q.exceeded,
-		&q.qflags, &q.stimestamp)
-	q.size += 10
-	UnPack(buf[q.size:q.size+84], &q.sinodes, &q.slength, &q.ssize, &q.srealsize,
+	UnPack(buf[q.size:q.size+94], &q.graceperiod, &q.exceeded, &q.qflags,
+		&q.stimestamp, &q.sinodes, &q.slength, &q.ssize, &q.srealsize,
 		&q.hinodes, &q.hlength, &q.hsize, &q.hrealsize,
 		&q.currinodes, &q.currlength, &q.currsize, &q.currrealsize)
-	q.size += 84
+	q.size += 94
 	return q
 }
 
