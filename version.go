@@ -38,10 +38,29 @@ func ParseVersionInt(maj uint16, mid, min uint8) Version {
 	return Version(res)
 }
 
-func (v Version) String() string {
-	var maj uint16
-	var mid, min uint8
+func (v Version) ToInt() (maj uint16, mid, min uint8) {
 	res := Pack(uint32(v))
-	read(bytes.NewBuffer(res), &maj, &mid, &min)
+	UnPack(res, &maj, &mid, &min)
+	return
+}
+
+func (v Version) String() string {
+	maj, mid, min := v.ToInt()
 	return fmt.Sprintf("%d.%d.%d", maj, mid, min)
+}
+
+func (v Version) MoreThan(maj uint16, mid, min uint8) bool {
+	return v >= ParseVersionInt(maj, mid, min)
+}
+
+func (v Version) LessThan(maj uint16, mid, min uint8) bool {
+	return v < ParseVersionInt(maj, mid, min)
+}
+
+func (c *Client) SetVersion(ver uint32) {
+	maj, mid, min := Version(ver).ToInt()
+	if maj >= 2 {
+		min >>= 1
+	}
+	c.Version = ParseVersionInt(maj, mid, min)
 }
