@@ -35,6 +35,6 @@ const CLTOMA_INFO = 510
 const CLTOMA_QUOTA_INFO = 518
 
 // quota_time_limit:32 N*[ inode:32 pleng:32 path:plengB [graceperiod:32]
-// exceeded:8 qflags:8 stimestamp:32 sinodes:32 slength:64 ssize:64 sgoalsize:64
-// hinodes:32 hlength:64 hsize:64 hgoalsize:64 currinodes:32 currlength:64
-// currsize:64 currgoalsize:64 ]
+// exceeded:8 qflags:8 stimestamp:32 sinodes:32 slength:64 ssize:64 srealsize:64
+// hinodes:32 hlength:64 hsize:64 hrealsize:64 currinodes:32 currlength:64
+// currsize:64 currrealsize:64 ]

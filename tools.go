@@ -32,11 +32,11 @@ type QuotaInfo struct {
 	exceeded, qflags                   uint8
 	stimestamp                         uint32
 	sinodes                            uint32 // soft
-	slength, ssize, sgoalsize          uint64
+	slength, ssize, srealsize          uint64
 	hinodes                            uint32 // hard
-	hlength, hsize, hgoalsize          uint64
+	hlength, hsize, hrealsize          uint64
 	currinodes                         uint32 // current
-	currlength, currsize, currgoalsize uint64
+	currlength, currsize, currrealsize uint64
 }
 
 // get the max retio, only care soft quota
@@ -92,9 +92,9 @@ func (c *Client) UnPackQuota(buf []byte) *QuotaInfo {
 		UnPack(buf[q.size:q.size+6], &q.exceeded, &q.qflags, &q.stimestamp)
 		q.size += 6
 	}
-	UnPack(buf[q.size:q.size+84], &q.sinodes, &q.slength, &q.ssize, &q.sgoalsize,
-		&q.hinodes, &q.hlength, &q.hsize, &q.hgoalsize,
-		&q.currinodes, &q.currlength, &q.currsize, &q.currgoalsize)
+	UnPack(buf[q.size:q.size+84], &q.sinodes, &q.slength, &q.ssize, &q.srealsize,
+		&q.hinodes, &q.hlength, &q.hsize, &q.hrealsize,
+		&q.currinodes, &q.currlength, &q.currsize, &q.currrealsize)
 	q.size += 84
 	return q
 }
