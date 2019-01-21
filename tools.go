@@ -39,6 +39,41 @@ type QuotaInfo struct {
 	currlength, currsize, currgoalsize uint64
 }
 
+// get the max retio, only care soft quota
+func (info *QuotaInfo) Usage() (current, quota string, retio float64) {
+	if info.ssize != 0 {
+		c := float64(info.currsize)
+		q := float64(info.ssize)
+		r := c / q
+		if r > retio {
+			retio = r
+			current = FormatBytes(c, Binary)
+			quota = FormatBytes(q, Binary)
+		}
+	}
+	if info.sinodes != 0 {
+		c := float64(info.currinodes)
+		q := float64(info.sinodes)
+		r := c / q
+		if r > retio {
+			retio = r
+			current = FormatBytes(c, Decimal)
+			quota = FormatBytes(q, Decimal)
+		}
+	}
+	if info.slength != 0 {
+		c := float64(info.currlength)
+		q := float64(info.slength)
+		r := c / q
+		if r >= retio {
+			retio = r
+			current = FormatBytes(c, Binary)
+			quota = FormatBytes(q, Binary)
+		}
+	}
+	return
+}
+
 func (c *Client) UnPackQuota(buf []byte) *QuotaInfo {
 	if len(buf) <= 98 {
 		return nil
@@ -88,4 +123,11 @@ func (c *Client) AllQuotaInfo() (quota QuotaInfoMap, err error) {
 	}
 	glog.V(5).Infof("quota number %d", len(quota))
 	return
+}
+
+// get all usage of mfs by sending command to mfs master
+func GetUsage(masterAddr string) (QuotaInfoMap, error) {
+	m := NewTools(masterAddr)
+	defer m.Close()
+	return m.AllQuotaInfo()
 }
