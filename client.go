@@ -48,14 +48,16 @@ func (c *Client) Connect() (err error) {
 	if c.conn != nil {
 		return
 	}
+	var conn net.Conn
 	c.Lock()
 	defer c.Unlock()
 	for i := 0; i < 3; i++ {
-		conn, err := net.DialTimeout("tcp", c.addr, time.Minute)
+		conn, err = net.DialTimeout("tcp", c.addr, time.Minute)
 		if err == nil {
 			c.conn = conn
 			break
 		}
+		glog.V(8).Infof("connect mfs master error: %v retry #%d", err, i+1)
 		time.Sleep(time.Duration(i+1) * time.Second)
 	}
 	if err != nil {
