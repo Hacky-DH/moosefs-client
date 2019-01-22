@@ -2,6 +2,7 @@ package mfscli
 
 import (
 	"bytes"
+	"crypto/md5"
 	"fmt"
 	"github.com/golang/glog"
 	"io"
@@ -72,11 +73,6 @@ func (c *Client) Close() {
 		c.conn.Close()
 		c.conn = nil
 	}
-}
-
-func (c *Client) Register() (err error) {
-	//TODO
-	return
 }
 
 func (c *Client) heartbeat() {
@@ -167,5 +163,102 @@ func (c *Client) doCmd(cmd uint32, args ...interface{}) (r []byte, err error) {
 		}
 		r = buf
 	}
+	return
+}
+
+func getStatus(buf []byte) (err error) {
+	if len(buf) < 1 {
+		err = fmt.Errorf("got wrong size %d<1 from mfsmaster", len(buf))
+		return
+	}
+	var code uint8
+	UnPack(buf, &code)
+	if code != 0 {
+		err = fmt.Errorf("got error from mfsmaster: %s", MFSStrerror(code))
+		return
+	}
+	return
+}
+
+func (c *Client) CreateSession() (err error) {
+	err = c.MasterVersion()
+	if err != nil {
+		return
+	}
+	var buf []byte
+	buf, err = c.doCmd(CLTOMA_FUSE_REGISTER, FUSE_REGISTER_BLOB_ACL,
+		REGISTER_GETRANDOM)
+	if err != nil {
+		return
+	}
+	if len(buf) != 32 {
+		err = fmt.Errorf("got wrong size %d!=32 from mfsmaster", len(buf))
+		return
+	}
+	if c.sessionId == 0 {
+		pwFinal := make([]byte, 16)
+		if len(c.password) > 0 {
+			pwMd5 := md5.Sum([]byte(c.password))
+			md := md5.New()
+			md.Write(buf[:16])
+			md.Write(pwMd5[:])
+			md.Write(buf[16:])
+			pwFinal = md.Sum(nil)
+		}
+		buf, err = c.doCmd(CLTOMA_FUSE_REGISTER, FUSE_REGISTER_BLOB_ACL,
+			REGISTER_NEWSESSION, c.Version, 2, "/\000", 2, "/\000", pwFinal)
+	} else {
+		buf, err = c.doCmd(CLTOMA_FUSE_REGISTER, FUSE_REGISTER_BLOB_ACL,
+			REGISTER_RECONNECT, c.sessionId, c.Version)
+	}
+	if err != nil {
+		return
+	}
+	if len(buf) == 1 {
+		err = getStatus(buf)
+		if err != nil {
+			return
+		}
+	}
+	if len(buf) < 43 {
+		err = fmt.Errorf("got wrong size %d<43 from mfsmaster", len(buf))
+		return
+	}
+	var id uint32
+	UnPack(buf[4:], &id)
+	if 0 == c.sessionId {
+		c.sessionId = id
+		glog.V(8).Infof("create new session id %d", id)
+	}
+	return
+}
+
+func (c *Client) CloseSession() (err error) {
+	if c.sessionId == 0 {
+		return
+	}
+	buf, err := c.doCmd(CLTOMA_FUSE_REGISTER, FUSE_REGISTER_BLOB_ACL,
+		REGISTER_CLOSESESSION, c.sessionId)
+	if err != nil {
+		return
+	}
+	err = getStatus(buf)
+	if err != nil {
+		return
+	}
+	glog.V(8).Infof("close session id %d", c.sessionId)
+	return
+}
+
+func (c *Client) RemoveSession(sessionId uint32) (err error) {
+	buf, err := c.doCmd(CLTOMA_SESSION_COMMAND, uint8(0), sessionId)
+	if err != nil {
+		return
+	}
+	err = getStatus(buf)
+	if err != nil {
+		return
+	}
+	glog.V(8).Infof("remove session id %d", sessionId)
 	return
 }

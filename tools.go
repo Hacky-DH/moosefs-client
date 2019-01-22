@@ -17,8 +17,8 @@ func (c *Client) MasterVersion() error {
 	var ver uint32
 	UnPack(buf, &ver)
 	c.SetVersion(ver)
-	if c.Version.LessThan(3, 0, 9) {
-		return fmt.Errorf("client only support mfsmaster version >= 3.0.9")
+	if c.Version.LessThan(3, 0, 72) {
+		return fmt.Errorf("client only support mfsmaster version >= 3.0.72")
 	}
 	glog.V(5).Infof("mfsmaster version %s", c.Version)
 	return nil
@@ -123,4 +123,17 @@ func GetUsage(masterAddr string) (QuotaInfoMap, error) {
 	m := NewTools(masterAddr)
 	defer m.Close()
 	return m.AllQuotaInfo()
+}
+
+func (c *Client) QuotaControl() (s string, err error) {
+	err = c.CreateSession()
+	if err != nil {
+		return
+	}
+	defer c.CloseSession()
+	//buf, err := c.doCmd(CLTOMA_FUSE_QUOTACONTROL, 0, 13, 0)
+	if err != nil {
+		return
+	}
+	return
 }
