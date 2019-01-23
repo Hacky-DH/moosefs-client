@@ -186,18 +186,18 @@ func (c *Client) CreateSession() (err error) {
 		return
 	}
 	var buf []byte
-	buf, err = c.doCmd(CLTOMA_FUSE_REGISTER, FUSE_REGISTER_BLOB_ACL,
-		REGISTER_GETRANDOM)
-	if err != nil {
-		return
-	}
-	if len(buf) != 32 {
-		err = fmt.Errorf("got wrong size %d!=32 from mfsmaster", len(buf))
-		return
-	}
 	if c.sessionId == 0 {
 		pwFinal := make([]byte, 16)
 		if len(c.password) > 0 {
+			buf, err = c.doCmd(CLTOMA_FUSE_REGISTER, FUSE_REGISTER_BLOB_ACL,
+				REGISTER_GETRANDOM)
+			if err != nil {
+				return
+			}
+			if len(buf) != 32 {
+				err = fmt.Errorf("got wrong size %d!=32 from mfsmaster", len(buf))
+				return
+			}
 			pwMd5 := md5.Sum([]byte(c.password))
 			md := md5.New()
 			md.Write(buf[:16])
@@ -219,6 +219,10 @@ func (c *Client) CreateSession() (err error) {
 		if err != nil {
 			return
 		}
+		if c.sessionId != 0 {
+			glog.V(8).Infof("reuse session id %d", c.sessionId)
+			return
+		}
 	}
 	if len(buf) < 43 {
 		err = fmt.Errorf("got wrong size %d<43 from mfsmaster", len(buf))
@@ -226,10 +230,11 @@ func (c *Client) CreateSession() (err error) {
 	}
 	var id uint32
 	UnPack(buf[4:], &id)
-	if 0 == c.sessionId {
-		c.sessionId = id
-		glog.V(8).Infof("create new session id %d", id)
+	if 0 != c.sessionId {
+		c.CloseSession()
 	}
+	c.sessionId = id
+	glog.V(8).Infof("create new session id %d", id)
 	return
 }
 
@@ -247,6 +252,7 @@ func (c *Client) CloseSession() (err error) {
 		return
 	}
 	glog.V(8).Infof("close session id %d", c.sessionId)
+	c.sessionId = 0
 	return
 }
 
