@@ -268,3 +268,37 @@ func (c *Client) RemoveSession(sessionId uint32) (err error) {
 	glog.V(8).Infof("remove session id %d", sessionId)
 	return
 }
+
+func (c *Client) ListSession() (ids []uint32, err error) {
+	buf, err := c.doCmd(CLTOMA_SESSION_LIST, uint8(2))
+	if err != nil {
+		return
+	}
+	if len(buf) <= 2 {
+		return
+	}
+	var stats uint16
+	UnPack(buf, &stats)
+	if stats != 16 {
+		err = fmt.Errorf("list session got wrong stats %d!=16 from mfsmaster", stats)
+		return
+	}
+	if len(buf) < 188 {
+		err = fmt.Errorf("list session got small size %d<188 from mfsmaster", len(buf))
+		return
+	}
+	ids = make([]uint32, 0)
+	var id uint32
+	pos := 2
+	for pos < len(buf) {
+		UnPack(buf[pos:], &id)
+		ids = append(ids, id)
+		glog.V(8).Infof("list session id %d", id)
+		pos += 21
+		UnPack(buf[pos:], &id) // ileng
+		pos += 4 + int(id)
+		UnPack(buf[pos:], &id) // pleng
+		pos += 4 + int(id) + 27 + 128
+	}
+	return
+}
