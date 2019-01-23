@@ -42,3 +42,31 @@ func TestFormatBytes(t *testing.T) {
 		t.Error("expect error")
 	}
 }
+
+func TestParseBytes(t *testing.T) {
+	f, err := ParseBytes("23445")
+	if err != nil {
+		t.Error(err)
+	}
+	if f != 23445 {
+		t.Errorf("unexpect %d", f)
+	}
+	f, err = ParseBytes("2.45M")
+	if err != nil {
+		t.Error(err)
+	}
+	if f != 2450000 {
+		t.Errorf("unexpect %d", f)
+	}
+	f, err = ParseBytes("2.45Mi")
+	if err != nil {
+		t.Error(err)
+	}
+	if f != 2569011 {
+		t.Errorf("unexpect %d", f)
+	}
+	f, err = ParseBytes("2.45ab")
+	if err == nil {
+		t.Error("unexpect")
+	}
+}
