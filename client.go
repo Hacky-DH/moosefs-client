@@ -17,6 +17,8 @@ type Client struct {
 	conn      net.Conn
 	addr      string
 	password  string
+	Subdir    string //remote subdir
+	rootPath  string //local root path
 	uid       uint32
 	gid       uint32
 	sessionId uint32
@@ -29,6 +31,8 @@ func NewClientPwd(addr, pwd string, heartbeat bool) (c *Client) {
 		password: pwd,
 		uid:      uint32(os.Getuid()),
 		gid:      uint32(os.Getgid()),
+		Subdir:   "/",
+		rootPath: "/mnt/client",
 	}
 	ip := strings.Split(addr, ":")
 	if len(ip) < 2 {
@@ -206,7 +210,8 @@ func (c *Client) CreateSession() (err error) {
 			pwFinal = md.Sum(nil)
 		}
 		buf, err = c.doCmd(CLTOMA_FUSE_REGISTER, FUSE_REGISTER_BLOB_ACL,
-			REGISTER_NEWSESSION, c.Version, 2, "/\000", 2, "/\000", pwFinal)
+			REGISTER_NEWSESSION, c.Version, len(c.rootPath), c.rootPath,
+			len(c.Subdir)+1, c.Subdir+"\000", pwFinal)
 	} else {
 		buf, err = c.doCmd(CLTOMA_FUSE_REGISTER, FUSE_REGISTER_BLOB_ACL,
 			REGISTER_RECONNECT, c.sessionId, c.Version)
