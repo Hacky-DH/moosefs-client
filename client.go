@@ -212,21 +212,14 @@ func (c *Client) CreateSession() (err error) {
 		if len(c.password) > 0 {
 			buf, err = c.doCmd(CLTOMA_FUSE_REGISTER, FUSE_REGISTER_BLOB_ACL,
 				REGISTER_GETRANDOM)
-			if err != nil {
-				glog.Error(err)
-				return
+			if err == nil && len(buf) == 32 {
+				pwMd5 := md5.Sum([]byte(c.password))
+				md := md5.New()
+				md.Write(buf[:16])
+				md.Write(pwMd5[:])
+				md.Write(buf[16:])
+				pwFinal = md.Sum(nil)
 			}
-			if len(buf) != 32 {
-				err = fmt.Errorf("got wrong size %d!=32 from mfsmaster", len(buf))
-				glog.Error(err)
-				return
-			}
-			pwMd5 := md5.Sum([]byte(c.password))
-			md := md5.New()
-			md.Write(buf[:16])
-			md.Write(pwMd5[:])
-			md.Write(buf[16:])
-			pwFinal = md.Sum(nil)
 		}
 		buf, err = c.doCmd(CLTOMA_FUSE_REGISTER, FUSE_REGISTER_BLOB_ACL,
 			REGISTER_NEWSESSION, c.Version, len(c.rootPath), c.rootPath,
