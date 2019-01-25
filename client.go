@@ -184,6 +184,22 @@ func getStatus(buf []byte) (err error) {
 	return
 }
 
+func (c *Client) checkBuf(buf []byte, id, minsize int) (err error) {
+	if len(buf) >= 4 {
+		var d uint32
+		UnPack(buf[:4], &d)
+		if int(d) != id {
+			err = fmt.Errorf("got unexpected query id %d!=%d from mfsmaster", d, id)
+			return
+		}
+	}
+	if len(buf) < minsize {
+		err = fmt.Errorf("got wrong size %d<%d from mfsmaster", len(buf), minsize)
+		return
+	}
+	return
+}
+
 func (c *Client) CreateSession() (err error) {
 	err = c.MasterVersion()
 	if err != nil {
@@ -360,5 +376,70 @@ func (c *Client) QuotaControl(info *QuotaInfo, mode quotaMode) (err error) {
 		&info.currinodes, &info.currlength, &info.currsize, &info.currrealsize)
 	cr, q, r := info.Usage()
 	glog.V(8).Infof("quota control success, %s %s %.2f%%", cr, q, r)
+	return
+}
+
+type StatInfo struct {
+	TotalSpace    uint64
+	AvailSpace    uint64
+	TrashSpace    uint64
+	ReservedSpace uint64
+	Inodes        uint32
+}
+
+func (c *Client) Statfs() (st *StatInfo, err error) {
+	buf, err := c.doCmd(CLTOMA_FUSE_STATFS, 0)
+	if err != nil {
+		return
+	}
+	err = c.checkBuf(buf, 0, 40)
+	if err != nil {
+		return
+	}
+	st = new(StatInfo)
+	UnPack(buf[4:], &st.TotalSpace, &st.AvailSpace, &st.TrashSpace,
+		&st.ReservedSpace, &st.Inodes)
+	return
+}
+
+func (c *Client) Access(inode uint32, mode uint16) (err error) {
+	buf, err := c.doCmd(CLTOMA_FUSE_ACCESS, 0, inode, c.uid, 1, c.gid, mode)
+	if err != nil {
+		return
+	}
+	err = c.checkBuf(buf, 0, 5)
+	if err != nil {
+		return
+	}
+	err = getStatus(buf[4:])
+	if err != nil {
+		return
+	}
+	return
+}
+
+func (c *Client) Lookup(parent uint32, name string) (inode uint32, err error) {
+	if len(name) > MFS_NAME_MAX {
+		err = fmt.Errorf("name length is too long")
+		return
+	}
+	buf, err := c.doCmd(CLTOMA_FUSE_LOOKUP, 0, parent, uint8(len(name)),
+		name, c.uid, 1, c.gid)
+	if err != nil {
+		return
+	}
+	if len(buf) == 5 {
+		err = c.checkBuf(buf, 0, 5)
+		if err != nil {
+			return
+		}
+		err = getStatus(buf[4:])
+		return
+	}
+	err = c.checkBuf(buf, 0, 8)
+	if err != nil {
+		return
+	}
+	UnPack(buf[4:], &inode)
 	return
 }

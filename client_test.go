@@ -38,6 +38,7 @@ func TestConnect(t *testing.T) {
 }
 
 func TestQuotaControlNoSession(t *testing.T) {
+	t.Skip()
 	c := client()
 	defer c.Close()
 	info := &QuotaInfo{
@@ -77,6 +78,40 @@ func TestQuotaControl(t *testing.T) {
 		}
 		if info.slength != 0 {
 			t.Fatal("unexpect ", info.slength)
+		}
+	})
+}
+
+func TestStatfs(t *testing.T) {
+	t.Skip()
+	session(t, func(c *Client) {
+		_, err := c.Statfs()
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+func TestAccess(t *testing.T) {
+	t.Skip()
+	session(t, func(c *Client) {
+		err := c.Access(1, 0x7)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+func TestLookup(t *testing.T) {
+	t.Skip()
+	session(t, func(c *Client) {
+		_, err := c.Lookup(1, ".")
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = c.Lookup(1, "notexist")
+		if err == nil {
+			t.Fatal("unexpect")
 		}
 	})
 }
