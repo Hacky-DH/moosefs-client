@@ -95,7 +95,7 @@ func TestStatfs(t *testing.T) {
 func TestAccess(t *testing.T) {
 	t.Skip()
 	session(t, func(c *Client) {
-		err := c.Access(1, 0x7)
+		err := c.Access(1, 0777)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -112,6 +112,48 @@ func TestLookup(t *testing.T) {
 		_, err = c.Lookup(1, "notexist")
 		if err == nil {
 			t.Fatal("unexpect")
+		}
+	})
+}
+
+func TestMkdir(t *testing.T) {
+	t.Skip()
+	session(t, func(c *Client) {
+		n := "testdir"
+		c.Rmdir(1, n)
+		_, err := c.Mkdir(1, n, 0755)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = c.Lookup(1, n)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+func TestMknod(t *testing.T) {
+	t.Skip()
+	session(t, func(c *Client) {
+		n := "testfile"
+		c.Unlink(1, n)
+		_, err := c.Mknod(1, n, 0744)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = c.Lookup(1, n)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+func TestReaddir(t *testing.T) {
+	t.Skip()
+	session(t, func(c *Client) {
+		_, err := c.Readdir(1)
+		if err != nil {
+			t.Fatal(err)
 		}
 	})
 }

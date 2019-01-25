@@ -203,6 +203,7 @@ func (c *Client) checkBuf(buf []byte, id, minsize int) (err error) {
 func (c *Client) CreateSession() (err error) {
 	err = c.MasterVersion()
 	if err != nil {
+		glog.Error(err)
 		return
 	}
 	var buf []byte
@@ -212,10 +213,12 @@ func (c *Client) CreateSession() (err error) {
 			buf, err = c.doCmd(CLTOMA_FUSE_REGISTER, FUSE_REGISTER_BLOB_ACL,
 				REGISTER_GETRANDOM)
 			if err != nil {
+				glog.Error(err)
 				return
 			}
 			if len(buf) != 32 {
 				err = fmt.Errorf("got wrong size %d!=32 from mfsmaster", len(buf))
+				glog.Error(err)
 				return
 			}
 			pwMd5 := md5.Sum([]byte(c.password))
@@ -233,11 +236,13 @@ func (c *Client) CreateSession() (err error) {
 			REGISTER_RECONNECT, c.sessionId, c.Version)
 	}
 	if err != nil {
+		glog.Error(err)
 		return
 	}
 	if len(buf) == 1 {
 		err = getStatus(buf)
 		if err != nil {
+			glog.Error(err)
 			return
 		}
 		if c.sessionId != 0 {
@@ -247,6 +252,7 @@ func (c *Client) CreateSession() (err error) {
 	}
 	if len(buf) < 43 {
 		err = fmt.Errorf("got wrong size %d<43 from mfsmaster", len(buf))
+		glog.Error(err)
 		return
 	}
 	var id uint32
@@ -266,10 +272,12 @@ func (c *Client) CloseSession() (err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_REGISTER, FUSE_REGISTER_BLOB_ACL,
 		REGISTER_CLOSESESSION, c.sessionId)
 	if err != nil {
+		glog.Error(err)
 		return
 	}
 	err = getStatus(buf)
 	if err != nil {
+		glog.Error(err)
 		return
 	}
 	glog.V(8).Infof("close session id %d", c.sessionId)
@@ -280,10 +288,12 @@ func (c *Client) CloseSession() (err error) {
 func (c *Client) RemoveSession(sessionId uint32) (err error) {
 	buf, err := c.doCmd(CLTOMA_SESSION_COMMAND, uint8(0), sessionId)
 	if err != nil {
+		glog.Error(err)
 		return
 	}
 	err = getStatus(buf)
 	if err != nil {
+		glog.Error(err)
 		return
 	}
 	glog.V(8).Infof("remove session id %d", sessionId)
@@ -293,6 +303,7 @@ func (c *Client) RemoveSession(sessionId uint32) (err error) {
 func (c *Client) ListSession() (ids []uint32, err error) {
 	buf, err := c.doCmd(CLTOMA_SESSION_LIST, uint8(2))
 	if err != nil {
+		glog.Error(err)
 		return
 	}
 	if len(buf) <= 2 {
@@ -302,10 +313,12 @@ func (c *Client) ListSession() (ids []uint32, err error) {
 	UnPack(buf, &stats)
 	if stats != 16 {
 		err = fmt.Errorf("list session got wrong stats %d!=16 from mfsmaster", stats)
+		glog.Error(err)
 		return
 	}
 	if len(buf) < 188 {
 		err = fmt.Errorf("list session got small size %d<188 from mfsmaster", len(buf))
+		glog.Error(err)
 		return
 	}
 	ids = make([]uint32, 0)
@@ -351,24 +364,22 @@ func (c *Client) QuotaControl(info *QuotaInfo, mode quotaMode) (err error) {
 		buf, err = c.doCmd(CLTOMA_FUSE_QUOTACONTROL, 0, info.inode, info.qflags)
 	}
 	if err != nil {
+		glog.Error(err)
 		return
 	}
-	if len(buf) >= 4 {
-		var id uint32
-		UnPack(buf[:4], &id)
-		if id != 0 {
-			err = fmt.Errorf("got unexpected query id %d!=0 from mfsmaster", id)
-			return
-		}
-	}
 	if len(buf) == 5 {
-		err = getStatus(buf[4:])
+		err = c.checkBuf(buf, 0, 5)
 		if err != nil {
+			glog.Error(err)
 			return
 		}
+		err = getStatus(buf[4:])
+		glog.Error(err)
+		return
 	}
-	if len(buf) < 93 {
-		err = fmt.Errorf("got wrong size %d<93 from mfsmaster", len(buf))
+	err = c.checkBuf(buf, 0, 93)
+	if err != nil {
+		glog.Error(err)
 		return
 	}
 	UnPack(buf[9:], &info.sinodes, &info.slength, &info.ssize, &info.srealsize,
@@ -390,10 +401,12 @@ type StatInfo struct {
 func (c *Client) Statfs() (st *StatInfo, err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_STATFS, 0)
 	if err != nil {
+		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 40)
 	if err != nil {
+		glog.Error(err)
 		return
 	}
 	st = new(StatInfo)
@@ -405,14 +418,17 @@ func (c *Client) Statfs() (st *StatInfo, err error) {
 func (c *Client) Access(inode uint32, mode uint16) (err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_ACCESS, 0, inode, c.uid, 1, c.gid, mode)
 	if err != nil {
+		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 5)
 	if err != nil {
+		glog.Error(err)
 		return
 	}
 	err = getStatus(buf[4:])
 	if err != nil {
+		glog.Error(err)
 		return
 	}
 	return
@@ -421,25 +437,178 @@ func (c *Client) Access(inode uint32, mode uint16) (err error) {
 func (c *Client) Lookup(parent uint32, name string) (inode uint32, err error) {
 	if len(name) > MFS_NAME_MAX {
 		err = fmt.Errorf("name length is too long")
+		glog.Error(err)
 		return
 	}
 	buf, err := c.doCmd(CLTOMA_FUSE_LOOKUP, 0, parent, uint8(len(name)),
 		name, c.uid, 1, c.gid)
 	if err != nil {
+		glog.Error(err)
 		return
 	}
 	if len(buf) == 5 {
 		err = c.checkBuf(buf, 0, 5)
 		if err != nil {
+			glog.Error(err)
 			return
 		}
 		err = getStatus(buf[4:])
+		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 8)
 	if err != nil {
+		glog.Error(err)
 		return
 	}
 	UnPack(buf[4:], &inode)
+	return
+}
+
+func (c *Client) Mkdir(parent uint32, name string,
+	mode uint16) (inode uint32, err error) {
+	if len(name) > MFS_NAME_MAX {
+		err = fmt.Errorf("name length is too long")
+		glog.Error(err)
+		return
+	}
+	buf, err := c.doCmd(CLTOMA_FUSE_MKDIR, 0, parent, uint8(len(name)),
+		name, mode, uint16(0), c.uid, 1, c.gid, uint8(0))
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	if len(buf) == 5 {
+		err = c.checkBuf(buf, 0, 5)
+		if err != nil {
+			glog.Error(err)
+			return
+		}
+		err = getStatus(buf[4:])
+		glog.Error(err)
+		return
+	}
+	err = c.checkBuf(buf, 0, 8)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	UnPack(buf[4:], &inode)
+	glog.V(8).Infof("mkdir name %s inode %d parent %d", name, inode, parent)
+	return
+}
+
+func (c *Client) Mknod(parent uint32, name string, mode uint16) (inode uint32, err error) {
+	if len(name) > MFS_NAME_MAX {
+		err = fmt.Errorf("name length is too long")
+		glog.Error(err)
+		return
+	}
+	buf, err := c.doCmd(CLTOMA_FUSE_MKNOD, 0, parent, uint8(len(name)),
+		name, uint8(1), mode, uint16(0), c.uid, 1, c.gid, 0)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	if len(buf) == 5 {
+		err = c.checkBuf(buf, 0, 5)
+		if err != nil {
+			glog.Error(err)
+			return
+		}
+		err = getStatus(buf[4:])
+		glog.Error(err)
+		return
+	}
+	err = c.checkBuf(buf, 0, 8)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	UnPack(buf[4:], &inode)
+	glog.V(8).Infof("mknod name %s inode %d parent %d", name, inode, parent)
+	return
+}
+
+func (c *Client) remove(parent uint32, name string, cmd uint32) (err error) {
+	if len(name) > MFS_NAME_MAX {
+		err = fmt.Errorf("name length is too long")
+		glog.Error(err)
+		return
+	}
+	buf, err := c.doCmd(cmd, 0, parent, uint8(len(name)),
+		name, c.uid, 1, c.gid)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	err = c.checkBuf(buf, 0, 5)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	err = getStatus(buf[4:])
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	glog.V(8).Infof("remove name %s parent %d", name, parent)
+	return
+}
+
+func (c *Client) Rmdir(parent uint32, name string) (err error) {
+	return c.remove(parent, name, CLTOMA_FUSE_RMDIR)
+}
+
+func (c *Client) Unlink(parent uint32, name string) (err error) {
+	return c.remove(parent, name, CLTOMA_FUSE_UNLINK)
+}
+
+type ReaddirInfo struct {
+	class uint8
+	inode uint32
+	name  string
+}
+
+type ReaddirInfoMap map[uint32]*ReaddirInfo
+
+func (c *Client) Readdir(parent uint32) (infoMap ReaddirInfoMap, err error) {
+	//max entries 0xffff
+	buf, err := c.doCmd(CLTOMA_FUSE_READDIR, 0, parent, c.uid, 1, c.gid,
+		uint8(0), 0xffff, uint64(0))
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	if len(buf) == 5 {
+		err = c.checkBuf(buf, 0, 5)
+		if err != nil {
+			glog.Error(err)
+			return
+		}
+		err = getStatus(buf[4:])
+		glog.Error(err)
+		return
+	}
+	err = c.checkBuf(buf, 0, 27)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	pos := 12
+	var sz uint8
+	infoMap = make(ReaddirInfoMap)
+	for pos < len(buf) {
+		info := new(ReaddirInfo)
+		UnPack(buf[pos:], &sz)
+		pos++
+		info.name = string(buf[pos : pos+int(sz)])
+		pos += int(sz)
+		UnPack(buf[pos:], &info.inode, &info.class)
+		pos += 5
+		infoMap[info.inode] = info
+		glog.V(10).Infof("readdir inode %d name %s", info.inode, info.name)
+	}
+	glog.V(8).Infof("readdir parent %d len %d", parent, len(infoMap))
 	return
 }
