@@ -41,6 +41,16 @@ type QuotaInfo struct {
 
 // get the max retio, only care soft quota
 func (info *QuotaInfo) Usage() (current, quota string, retio float64) {
+	c := float64(info.currlength)
+	q := float64(info.slength)
+	current = FormatBytes(c, Binary)
+	quota = FormatBytes(q, Binary)
+	if info.slength != 0 {
+		r := c / q
+		if r >= retio {
+			retio = r
+		}
+	}
 	if info.ssize != 0 {
 		c := float64(info.currsize)
 		q := float64(info.ssize)
@@ -59,16 +69,6 @@ func (info *QuotaInfo) Usage() (current, quota string, retio float64) {
 			retio = r
 			current = FormatBytes(c, Decimal)
 			quota = FormatBytes(q, Decimal)
-		}
-	}
-	if info.slength != 0 {
-		c := float64(info.currlength)
-		q := float64(info.slength)
-		r := c / q
-		if r >= retio {
-			retio = r
-			current = FormatBytes(c, Binary)
-			quota = FormatBytes(q, Binary)
 		}
 	}
 	return
