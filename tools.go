@@ -124,16 +124,3 @@ func GetUsage(masterAddr string) (QuotaInfoMap, error) {
 	defer m.Close()
 	return m.AllQuotaInfo()
 }
-
-func (c *Client) QuotaControl() (s string, err error) {
-	err = c.CreateSession()
-	if err != nil {
-		return
-	}
-	defer c.CloseSession()
-	//buf, err := c.doCmd(CLTOMA_FUSE_QUOTACONTROL, 0, 13, 0)
-	if err != nil {
-		return
-	}
-	return
-}

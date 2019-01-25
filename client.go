@@ -302,3 +302,58 @@ func (c *Client) ListSession() (ids []uint32, err error) {
 	}
 	return
 }
+
+type quotaMode int
+
+const (
+	quotaGet quotaMode = iota
+	quotaSet
+	quotaDel
+)
+
+func (c *Client) QuotaControl(info *QuotaInfo, mode quotaMode) (err error) {
+	if info == nil {
+		return
+	}
+	if mode == quotaGet {
+		info.qflags = 0
+	} else {
+		// set or del all quota
+		info.qflags = 0xff
+	}
+	var buf []byte
+	if mode == quotaSet {
+		buf, err = c.doCmd(CLTOMA_FUSE_QUOTACONTROL, 0, info.inode, info.qflags,
+			info.graceperiod, info.sinodes, info.slength, info.ssize, info.srealsize,
+			info.hinodes, info.hlength, info.hsize, info.hrealsize)
+	} else {
+		buf, err = c.doCmd(CLTOMA_FUSE_QUOTACONTROL, 0, info.inode, info.qflags)
+	}
+	if err != nil {
+		return
+	}
+	if len(buf) >= 4 {
+		var id uint32
+		UnPack(buf[:4], &id)
+		if id != 0 {
+			err = fmt.Errorf("got unexpected query id %d!=0 from mfsmaster", id)
+			return
+		}
+	}
+	if len(buf) == 5 {
+		err = getStatus(buf[4:])
+		if err != nil {
+			return
+		}
+	}
+	if len(buf) < 93 {
+		err = fmt.Errorf("got wrong size %d<93 from mfsmaster", len(buf))
+		return
+	}
+	UnPack(buf[9:], &info.sinodes, &info.slength, &info.ssize, &info.srealsize,
+		&info.hinodes, &info.hlength, &info.hsize, &info.hrealsize,
+		&info.currinodes, &info.currlength, &info.currsize, &info.currrealsize)
+	cr, q, r := info.Usage()
+	glog.V(8).Infof("quota control success, %s %s %.2f%%", cr, q, r)
+	return
+}
