@@ -605,3 +605,99 @@ func (c *Client) Readdir(parent uint32) (infoMap ReaddirInfoMap, err error) {
 	glog.V(8).Infof("readdir parent %d len %d", parent, len(infoMap))
 	return
 }
+
+const (
+	TYPE_FILE = iota + 1
+	TYPE_DIRECTORY
+	TYPE_SYMLINK
+	TYPE_FIFO
+	TYPE_BLOCKDEV
+	TYPE_CHARDEV
+	TYPE_SOCKET
+	TYPE_TRASH
+	TYPE_SUSTAINED
+)
+
+// flags: 01 noacache 02 noecache 04 allowdatacache 08 noxattr 10 directmode
+// 'floating-point' size
+// examples:
+//    1200 =  12.00 B
+// 1023443 = 234.43 kB
+// 2052312 = 523.12 MB
+// 3001298 =  12.98 GB
+// 4001401 =  14.01 TB
+type FileInfo struct {
+	Flags uint8
+	Type  uint8
+	Inode uint32
+	Uid   uint32
+	Gid   uint32
+	Mode  os.FileMode
+	NLink uint32
+	ATime time.Time
+	MTime time.Time
+	CTime time.Time
+	Size  uint64
+}
+
+func (fi *FileInfo) String() string {
+	return fmt.Sprintf("inode %d type %d flags 0x%x mode %s uid %d gid %d size %d\n\tatime %v mtime %v ctime %v",
+		fi.Inode, fi.Type, fi.Flags, fi.Mode, fi.Uid, fi.Gid, fi.Size, fi.ATime, fi.MTime, fi.CTime)
+}
+
+func parseFileInfo(inode uint32, buf []byte) (size uint32, fi *FileInfo, err error) {
+	if len(buf) < 27 {
+		err = fmt.Errorf("file info buf length is too short")
+		glog.Error(err)
+		return
+	}
+	fi = new(FileInfo)
+	fi.Inode = inode
+	var mode uint16
+	var atime, mtime, ctime, dev uint32
+	UnPack(buf, &fi.Flags, &mode, &fi.Uid, &fi.Gid, &atime, &mtime, &ctime, &fi.NLink)
+	size += 27
+	fi.Type = uint8(mode >> 12)
+	fi.Mode = os.FileMode(mode & 0x0FFF)
+	fi.ATime = time.Unix(int64(atime), 0)
+	fi.MTime = time.Unix(int64(mtime), 0)
+	fi.CTime = time.Unix(int64(ctime), 0)
+	fi.Size = 0
+	defer func() {
+		glog.V(10).Infof("parseFileInfo %s", fi)
+	}()
+	switch fi.Type {
+	case TYPE_FILE:
+		goto readSize
+	case TYPE_DIRECTORY:
+		fi.Mode |= os.ModeDir
+		goto readSize
+	case TYPE_SYMLINK:
+		fi.Mode |= os.ModeSymlink
+		goto readSize
+	case TYPE_FIFO:
+		fi.Mode |= os.ModeNamedPipe
+		return
+	case TYPE_SOCKET:
+		fi.Mode |= os.ModeSocket
+		return
+	case TYPE_BLOCKDEV:
+		fi.Mode |= os.ModeDevice
+		goto readDev
+	case TYPE_CHARDEV:
+		fi.Mode |= os.ModeCharDevice
+		goto readDev
+	default:
+		return
+	}
+	return
+readSize:
+	UnPack(buf[size:], &fi.Size)
+	size += 8
+	return
+readDev:
+	UnPack(buf[size:], &dev)
+	fi.Size = uint64(dev)
+	size += 4
+	return
+}
