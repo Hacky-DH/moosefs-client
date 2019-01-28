@@ -807,6 +807,7 @@ func (c *Client) Open(inode uint32, flags uint8) (err error) {
 		glog.Error(err)
 		return
 	}
+	glog.V(8).Infof("open %d", inode)
 	return
 }
 
@@ -877,6 +878,7 @@ func (c *Client) GetAttr(inode uint32) (fi *FileInfo, err error) {
 		glog.Error(err)
 		return
 	}
+	glog.V(8).Infof("get attr %d", inode)
 	return
 }
 
@@ -920,6 +922,7 @@ func (c *Client) SetAttr(inode uint32, setmask uint8, mode uint16,
 		glog.Error(err)
 		return
 	}
+	glog.V(8).Infof("set attr %d setmask %x", inode, setmask)
 	return
 }
 
@@ -946,6 +949,7 @@ func (c *Client) Undel(inode uint32) (err error) {
 	if err != nil {
 		glog.Error(err)
 	}
+	glog.V(8).Infof("undel %d", inode)
 	return
 }
 
@@ -964,6 +968,7 @@ func (c *Client) Purge(inode uint32) (err error) {
 	if err != nil {
 		glog.Error(err)
 	}
+	glog.V(8).Infof("purge %d", inode)
 	return
 }
 
