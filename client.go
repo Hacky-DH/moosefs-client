@@ -16,9 +16,9 @@ import (
 type Client struct {
 	conn      net.Conn
 	addr      string
-	password  string
+	Password  string
 	Subdir    string //remote subdir
-	rootPath  string //local root path
+	RootPath  string //local root path
 	uid       uint32
 	gid       uint32
 	sessionId uint32
@@ -28,11 +28,11 @@ type Client struct {
 
 func NewClientPwd(addr, pwd string, heartbeat bool) (c *Client) {
 	c = &Client{
-		password: pwd,
+		Password: pwd,
 		uid:      uint32(os.Getuid()),
 		gid:      uint32(os.Getgid()),
 		Subdir:   "/",
-		rootPath: "/mnt/client",
+		RootPath: "/mnt/client",
 	}
 	ip := strings.Split(addr, ":")
 	if len(ip) < 2 {
@@ -209,11 +209,11 @@ func (c *Client) CreateSession() (err error) {
 	var buf []byte
 	if c.sessionId == 0 {
 		pwFinal := make([]byte, 16)
-		if len(c.password) > 0 {
+		if len(c.Password) > 0 {
 			buf, err = c.doCmd(CLTOMA_FUSE_REGISTER, FUSE_REGISTER_BLOB_ACL,
 				REGISTER_GETRANDOM)
 			if err == nil && len(buf) == 32 {
-				pwMd5 := md5.Sum([]byte(c.password))
+				pwMd5 := md5.Sum([]byte(c.Password))
 				md := md5.New()
 				md.Write(buf[:16])
 				md.Write(pwMd5[:])
@@ -222,7 +222,7 @@ func (c *Client) CreateSession() (err error) {
 			}
 		}
 		buf, err = c.doCmd(CLTOMA_FUSE_REGISTER, FUSE_REGISTER_BLOB_ACL,
-			REGISTER_NEWSESSION, c.Version, len(c.rootPath), c.rootPath,
+			REGISTER_NEWSESSION, c.Version, len(c.RootPath), c.RootPath,
 			len(c.Subdir)+1, c.Subdir+"\000", pwFinal)
 	} else {
 		buf, err = c.doCmd(CLTOMA_FUSE_REGISTER, FUSE_REGISTER_BLOB_ACL,
@@ -330,26 +330,26 @@ func (c *Client) ListSession() (ids []uint32, err error) {
 	return
 }
 
-type quotaMode int
+type QuotaMode int
 
 const (
-	quotaGet quotaMode = iota
-	quotaSet
-	quotaDel
+	QuotaGet QuotaMode = iota
+	QuotaSet
+	QuotaDel
 )
 
-func (c *Client) QuotaControl(info *QuotaInfo, mode quotaMode) (err error) {
+func (c *Client) QuotaControl(info *QuotaInfo, mode QuotaMode) (err error) {
 	if info == nil {
 		return
 	}
-	if mode == quotaGet {
+	if mode == QuotaGet {
 		info.qflags = 0
 	} else {
 		// set or del all quota
 		info.qflags = 0xff
 	}
 	var buf []byte
-	if mode == quotaSet {
+	if mode == QuotaSet {
 		buf, err = c.doCmd(CLTOMA_FUSE_QUOTACONTROL, 0, info.inode, info.qflags,
 			info.graceperiod, info.sinodes, info.slength, info.ssize, info.srealsize,
 			info.hinodes, info.hlength, info.hsize, info.hrealsize)
@@ -558,9 +558,9 @@ func (c *Client) Unlink(parent uint32, name string) (err error) {
 }
 
 type ReaddirInfo struct {
-	class uint8
-	inode uint32
-	name  string
+	Type  uint8
+	Inode uint32
+	Name  string
 }
 
 type ReaddirInfoMap map[uint32]*ReaddirInfo
@@ -595,12 +595,12 @@ func (c *Client) Readdir(parent uint32) (infoMap ReaddirInfoMap, err error) {
 		info := new(ReaddirInfo)
 		UnPack(buf[pos:], &sz)
 		pos++
-		info.name = string(buf[pos : pos+int(sz)])
+		info.Name = string(buf[pos : pos+int(sz)])
 		pos += int(sz)
-		UnPack(buf[pos:], &info.inode, &info.class)
+		UnPack(buf[pos:], &info.Inode, &info.Type)
 		pos += 5
-		infoMap[info.inode] = info
-		glog.V(10).Infof("readdir inode %d name %s", info.inode, info.name)
+		infoMap[info.Inode] = info
+		glog.V(10).Infof("readdir inode %d name %s", info.Inode, info.Name)
 	}
 	glog.V(8).Infof("readdir parent %d len %d", parent, len(infoMap))
 	return

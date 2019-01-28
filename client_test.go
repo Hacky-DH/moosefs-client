@@ -45,7 +45,7 @@ func TestQuotaControlNoSession(t *testing.T) {
 		inode: 13,
 	}
 	var err error
-	err = c.QuotaControl(info, quotaGet)
+	err = c.QuotaControl(info, QuotaGet)
 	if err == nil {
 		t.Error("unexpected")
 	}
@@ -59,12 +59,12 @@ func TestQuotaControl(t *testing.T) {
 			inode:   13,
 			slength: s,
 		}
-		err := c.QuotaControl(info, quotaSet)
+		err := c.QuotaControl(info, QuotaSet)
 		if err != nil {
 			t.Fatal(err)
 		}
 		info.slength = 0
-		err = c.QuotaControl(info, quotaGet)
+		err = c.QuotaControl(info, QuotaGet)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -72,7 +72,7 @@ func TestQuotaControl(t *testing.T) {
 		if str != "1.00 TiB" {
 			t.Fatal("unexpect ", str)
 		}
-		err = c.QuotaControl(info, quotaDel)
+		err = c.QuotaControl(info, QuotaDel)
 		if err != nil {
 			t.Fatal(err)
 		}
