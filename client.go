@@ -1013,3 +1013,10 @@ func (c *Client) GetDirStats(inode uint32) (ds *DirStats, err error) {
 		inode, ds.Inodes, ds.Dirs, ds.Files)
 	return
 }
+
+// chunkopflags
+const (
+	CHUNKOPFLAG_CANMODTIME = 1 << iota
+	CHUNKOPFLAG_CONTINUEOP
+	CHUNKOPFLAG_CANUSERESERVESPACE
+)
