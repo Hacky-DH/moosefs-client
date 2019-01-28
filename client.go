@@ -596,6 +596,7 @@ func (c *Client) Readdir(parent uint32) (infoMap ReaddirInfoMap, err error) {
 		glog.Error(err)
 		return
 	}
+	// include . and  ..
 	err = c.checkBuf(buf, 0, 27)
 	if err != nil {
 		glog.Error(err)
@@ -616,6 +617,66 @@ func (c *Client) Readdir(parent uint32) (infoMap ReaddirInfoMap, err error) {
 		glog.V(10).Infof("readdir inode %d name %s", info.Inode, info.Name)
 	}
 	glog.V(8).Infof("readdir parent %d len %d", parent, len(infoMap))
+	return
+}
+
+type ReaddirInfoAttr struct {
+	Inode uint32
+	Name  string
+	Info  *FileInfo
+}
+
+type ReaddirInfoAttrMap map[uint32]*ReaddirInfoAttr
+
+func (c *Client) ReaddirAttr(parent uint32) (infoMap ReaddirInfoAttrMap, err error) {
+	//max entries 0xffff
+	buf, err := c.doCmd(CLTOMA_FUSE_READDIR, 0, parent, c.uid, 1, c.gid,
+		uint8(1), 0xffff, uint64(0))
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	if len(buf) == 5 {
+		err = c.checkBuf(buf, 0, 5)
+		if err != nil {
+			glog.Error(err)
+			return
+		}
+		err = getStatus(buf[4:])
+		glog.Error(err)
+		return
+	}
+	// include . and  ..
+	err = c.checkBuf(buf, 0, 79)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	pos := 12
+	var sz uint8
+	var n uint32
+	var fi *FileInfo
+	infoMap = make(ReaddirInfoAttrMap)
+	for pos < len(buf) {
+		info := new(ReaddirInfoAttr)
+		UnPack(buf[pos:], &sz)
+		pos++
+		info.Name = string(buf[pos : pos+int(sz)])
+		pos += int(sz)
+		UnPack(buf[pos:], &info.Inode)
+		pos += 4
+		n, fi, err = parseFileInfo(info.Inode, buf[pos:])
+		if err != nil {
+			glog.Error(err)
+			return
+		}
+		info.Info = fi
+		pos += int(n)
+		infoMap[info.Inode] = info
+		glog.V(10).Infof("readdir attr inode %d name %s mode %s",
+			info.Inode, info.Name, info.Info.Mode)
+	}
+	glog.V(8).Infof("readdir attr parent %d len %d", parent, len(infoMap))
 	return
 }
 

@@ -223,3 +223,13 @@ func TestPurge(t *testing.T) {
 		}
 	})
 }
+
+func TestReaddirAttr(t *testing.T) {
+	t.Skip()
+	session(t, func(c *Client) {
+		_, err := c.ReaddirAttr(1)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}
