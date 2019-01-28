@@ -197,3 +197,29 @@ func TestAttr(t *testing.T) {
 		c.Unlink(1, n)
 	})
 }
+
+func TestRemoveAllSession(t *testing.T) {
+	t.Skip()
+	c := client()
+	defer c.Close()
+	sess, _ := c.ListSession()
+	for _, s := range sess {
+		c.RemoveSession(s)
+	}
+}
+
+func TestPurge(t *testing.T) {
+	t.Skip()
+	session(t, func(c *Client) {
+		n := "testfile"
+		c.Unlink(1, n)
+		fi, err := c.Create(1, n, 0744)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = c.Purge(fi.Inode)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}

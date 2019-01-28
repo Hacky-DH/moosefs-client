@@ -232,6 +232,16 @@ const CLTOMA_FUSE_WRITE_CHUNK_END = 436
 // MATOCL
 // msgid:32 status:8
 
+const CLTOMA_FUSE_UNDEL = 458
+
+// msgid:32 inode:32
+// msgid:32 status:8
+
+const CLTOMA_FUSE_PURGE = 460
+
+// msgid:32 inode:32
+// msgid:32 status:8
+
 const CLTOMA_FUSE_QUOTACONTROL = 476
 
 // CLTOMA

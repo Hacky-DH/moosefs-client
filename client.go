@@ -869,3 +869,39 @@ func (c *Client) Chmod(inode uint32, mode uint16) (fi *FileInfo, err error) {
 func (c *Client) Chown(inode uint32, uid, gid uint32) (fi *FileInfo, err error) {
 	return c.SetAttr(inode, SET_UID_FLAG|SET_GID_FLAG, 0, uid, gid, 0, 0)
 }
+
+func (c *Client) Undel(inode uint32) (err error) {
+	buf, err := c.doCmd(CLTOMA_FUSE_UNDEL, 0, inode)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	err = c.checkBuf(buf, 0, 5)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	err = getStatus(buf[4:])
+	if err != nil {
+		glog.Error(err)
+	}
+	return
+}
+
+func (c *Client) Purge(inode uint32) (err error) {
+	buf, err := c.doCmd(CLTOMA_FUSE_PURGE, 0, inode)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	err = c.checkBuf(buf, 0, 5)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	err = getStatus(buf[4:])
+	if err != nil {
+		glog.Error(err)
+	}
+	return
+}
