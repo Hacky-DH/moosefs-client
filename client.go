@@ -459,7 +459,7 @@ func (c *Client) Lookup(parent uint32, name string) (inode uint32, err error) {
 }
 
 func (c *Client) Mkdir(parent uint32, name string,
-	mode uint16) (inode uint32, err error) {
+	mode uint16) (fi *FileInfo, err error) {
 	if len(name) > MFS_NAME_MAX {
 		err = fmt.Errorf("name length is too long")
 		glog.Error(err)
@@ -481,17 +481,24 @@ func (c *Client) Mkdir(parent uint32, name string,
 		glog.Error(err)
 		return
 	}
-	err = c.checkBuf(buf, 0, 8)
+	err = c.checkBuf(buf, 0, 35)
 	if err != nil {
 		glog.Error(err)
 		return
 	}
+	var inode uint32
 	UnPack(buf[4:], &inode)
+	_, fi, err = parseFileInfo(inode, buf[8:])
+	if err != nil {
+		glog.Error(err)
+		return
+	}
 	glog.V(8).Infof("mkdir name %s inode %d parent %d", name, inode, parent)
 	return
 }
 
-func (c *Client) Mknod(parent uint32, name string, mode uint16) (inode uint32, err error) {
+func (c *Client) Mknod(parent uint32, name string,
+	mode uint16) (fi *FileInfo, err error) {
 	if len(name) > MFS_NAME_MAX {
 		err = fmt.Errorf("name length is too long")
 		glog.Error(err)
@@ -513,12 +520,18 @@ func (c *Client) Mknod(parent uint32, name string, mode uint16) (inode uint32, e
 		glog.Error(err)
 		return
 	}
-	err = c.checkBuf(buf, 0, 8)
+	err = c.checkBuf(buf, 0, 35)
 	if err != nil {
 		glog.Error(err)
 		return
 	}
+	var inode uint32
 	UnPack(buf[4:], &inode)
+	_, fi, err = parseFileInfo(inode, buf[8:])
+	if err != nil {
+		glog.Error(err)
+		return
+	}
 	glog.V(8).Infof("mknod name %s inode %d parent %d", name, inode, parent)
 	return
 }
