@@ -92,6 +92,48 @@ const CLTOMA_FUSE_LOOKUP = 406
 // versions >= 3.0.40 - protocolid==2 ; chunk 0 data only for one-chunk files
 // with unlocked chunk)
 
+const CLTOMA_FUSE_GETATTR = 408
+
+// CLTOMA
+// msgid:32 inode:32
+// msgid:32 inode:32 uid:32 gid:32 - version <= 1.6.27
+// msgid:32 inode:32 opened:8 uid:32 gid:32
+// MATOCL
+// msgid:32 status:8
+// msgid:32 attr:ATTR
+
+const CLTOMA_FUSE_SETATTR = 410
+
+// CLTOMA
+// msgid:32 inode:32 opened:8 uid:32 gcnt:32 gcnt * [ gid:32 ] setmask:8
+// attrmode:16 attruid:32 attrgid:32 attratime:32 attrmtime:32 sugidclearmode:8
+// - version < 3.0.93
+// msgid:32 inode:32 opened:8 uid:32 gcnt:32 gcnt * [ gid:32 ] setmask:8
+// attrmode:16 attruid:32 attrgid:32 attratime:32 attrmtime:32 winattr:8
+// sugidclearmode:8
+// MATOCL
+// msgid:32 status:8
+// msgid:32 attr:ATTR
+
+const CLTOMA_FUSE_READLINK = 412
+
+// CLTOMA
+// msgid:32 inode:32
+// MATOCL
+// msgid:32 status:8
+// msgid:32 length:32 path:lengthB
+
+const CLTOMA_FUSE_SYMLINK = 414
+
+// CLTOMA
+// msgid:32 inode:32 name:NAME length:32 path:lengthB uid:32 gid:32 - version <
+// 2.0.0
+// msgid:32 inode:32 name:NAME length:32 path:lengthB uid:32 gcnt:32 gcnt * [
+// gid:32 ]
+// MATOCL
+// msgid:32 status:8
+// msgid:32 inode:32 attr:ATTR
+
 const CLTOMA_FUSE_MKNOD = 416
 
 // CLTOMA

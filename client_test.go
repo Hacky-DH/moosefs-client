@@ -129,6 +129,7 @@ func TestMkdir(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		c.Rmdir(1, n)
 	})
 }
 
@@ -145,6 +146,7 @@ func TestMknod(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		c.Unlink(1, n)
 	})
 }
 
@@ -171,5 +173,27 @@ func TestCreate(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		c.Unlink(1, n)
+	})
+}
+
+func TestAttr(t *testing.T) {
+	t.Skip()
+	session(t, func(c *Client) {
+		n := "testfile"
+		c.Unlink(1, n)
+		fi, err := c.Create(1, n, 0744)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = c.GetAttr(fi.Inode)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = c.Chmod(fi.Inode, 0766)
+		if err != nil {
+			t.Fatal(err)
+		}
+		c.Unlink(1, n)
 	})
 }

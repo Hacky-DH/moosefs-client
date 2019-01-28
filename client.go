@@ -789,3 +789,83 @@ func (c *Client) Create(parent uint32, name string,
 		name, inode, mode, parent)
 	return
 }
+
+func (c *Client) GetAttr(inode uint32) (fi *FileInfo, err error) {
+	buf, err := c.doCmd(CLTOMA_FUSE_GETATTR, 0, inode)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	if len(buf) == 5 {
+		err = c.checkBuf(buf, 0, 5)
+		if err != nil {
+			glog.Error(err)
+			return
+		}
+		err = getStatus(buf[4:])
+		glog.Error(err)
+		return
+	}
+	err = c.checkBuf(buf, 0, 31)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	_, fi, err = parseFileInfo(inode, buf[4:])
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	return
+}
+
+// for setmask
+const (
+	SET_WINATTR_FLAG = 1 << iota
+	SET_MODE_FLAG
+	SET_UID_FLAG
+	SET_GID_FLAG
+	SET_MTIME_NOW_FLAG
+	SET_MTIME_FLAG
+	SET_ATIME_FLAG
+	SET_ATIME_NOW_FLAG
+)
+
+func (c *Client) SetAttr(inode uint32, setmask uint8, mode uint16,
+	uid, gid, atime, mtime uint32) (fi *FileInfo, err error) {
+	buf, err := c.doCmd(CLTOMA_FUSE_SETATTR, 0, inode, uint8(0), c.uid, 1, c.gid,
+		setmask, mode, uid, gid, atime, mtime, uint8(0))
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	if len(buf) == 5 {
+		err = c.checkBuf(buf, 0, 5)
+		if err != nil {
+			glog.Error(err)
+			return
+		}
+		err = getStatus(buf[4:])
+		glog.Error(err)
+		return
+	}
+	err = c.checkBuf(buf, 0, 31)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	_, fi, err = parseFileInfo(inode, buf[4:])
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	return
+}
+
+func (c *Client) Chmod(inode uint32, mode uint16) (fi *FileInfo, err error) {
+	return c.SetAttr(inode, SET_MODE_FLAG, mode, 0, 0, 0, 0)
+}
+
+func (c *Client) Chown(inode uint32, uid, gid uint32) (fi *FileInfo, err error) {
+	return c.SetAttr(inode, SET_UID_FLAG|SET_GID_FLAG, 0, uid, gid, 0, 0)
+}
