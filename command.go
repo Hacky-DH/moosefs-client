@@ -242,6 +242,14 @@ const CLTOMA_FUSE_PURGE = 460
 // msgid:32 inode:32
 // msgid:32 status:8
 
+const CLTOMA_FUSE_GETDIRSTATS = 462
+
+// CLTOMA
+// msgid:32 inode:32
+// MATOCL
+// msgid:32 status:8
+// msgid:32 inodes:32 dirs:32 files:32 chunks:32 length:64 size:64 gsize:64
+
 const CLTOMA_FUSE_QUOTACONTROL = 476
 
 // CLTOMA

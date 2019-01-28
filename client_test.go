@@ -233,3 +233,13 @@ func TestReaddirAttr(t *testing.T) {
 		}
 	})
 }
+
+func TestDirStats(t *testing.T) {
+	t.Skip()
+	session(t, func(c *Client) {
+		_, err := c.GetDirStats(1)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}

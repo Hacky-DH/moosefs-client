@@ -966,3 +966,45 @@ func (c *Client) Purge(inode uint32) (err error) {
 	}
 	return
 }
+
+type DirStats struct {
+	Inode  uint32
+	Inodes uint32
+	Dirs   uint32
+	Files  uint32
+	Chunks uint32
+	Length uint64
+	Size   uint64
+	RSize  uint64
+}
+
+func (c *Client) GetDirStats(inode uint32) (ds *DirStats, err error) {
+	buf, err := c.doCmd(CLTOMA_FUSE_GETDIRSTATS, 0, inode)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	if len(buf) == 5 {
+		err = c.checkBuf(buf, 0, 5)
+		if err != nil {
+			glog.Error(err)
+			return
+		}
+		err = getStatus(buf[4:])
+		glog.Error(err)
+		return
+	}
+	err = c.checkBuf(buf, 0, 60)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	var tp uint32
+	ds = new(DirStats)
+	ds.Inode = inode
+	UnPack(buf[4:], &ds.Inodes, &ds.Dirs, &ds.Files, &tp, &tp,
+		&ds.Chunks, &tp, &tp, &ds.Length, &ds.Size, &ds.RSize)
+	glog.V(8).Infof("get dir stats %d inodes %d dirs %d files %d",
+		inode, ds.Inodes, ds.Dirs, ds.Files)
+	return
+}
