@@ -157,3 +157,19 @@ func TestReaddir(t *testing.T) {
 		}
 	})
 }
+
+func TestCreate(t *testing.T) {
+	t.Skip()
+	session(t, func(c *Client) {
+		n := "testfile"
+		c.Unlink(1, n)
+		fi, err := c.Create(1, n, 0744)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = c.Open(fi.Inode, 7)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}

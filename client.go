@@ -631,7 +631,8 @@ const (
 	TYPE_SUSTAINED
 )
 
-// flags: 01 noacache 02 noecache 04 allowdatacache 08 noxattr 10 directmode
+// flags: 01 noacache 02 noecache 04 allowdatacache
+// 		  08 noxattr 10 directmode
 // 'floating-point' size
 // examples:
 //    1200 =  12.00 B
@@ -655,10 +656,12 @@ type FileInfo struct {
 
 func (fi *FileInfo) String() string {
 	return fmt.Sprintf("inode %d type %d flags 0x%x mode %s uid %d gid %d size %d\n\tatime %v mtime %v ctime %v",
-		fi.Inode, fi.Type, fi.Flags, fi.Mode, fi.Uid, fi.Gid, fi.Size, fi.ATime, fi.MTime, fi.CTime)
+		fi.Inode, fi.Type, fi.Flags, fi.Mode, fi.Uid,
+		fi.Gid, fi.Size, fi.ATime, fi.MTime, fi.CTime)
 }
 
-func parseFileInfo(inode uint32, buf []byte) (size uint32, fi *FileInfo, err error) {
+func parseFileInfo(inode uint32, buf []byte) (size uint32,
+	fi *FileInfo, err error) {
 	if len(buf) < 27 {
 		err = fmt.Errorf("file info buf length is too short")
 		glog.Error(err)
@@ -668,7 +671,8 @@ func parseFileInfo(inode uint32, buf []byte) (size uint32, fi *FileInfo, err err
 	fi.Inode = inode
 	var mode uint16
 	var atime, mtime, ctime, dev uint32
-	UnPack(buf, &fi.Flags, &mode, &fi.Uid, &fi.Gid, &atime, &mtime, &ctime, &fi.NLink)
+	UnPack(buf, &fi.Flags, &mode, &fi.Uid, &fi.Gid, &atime,
+		&mtime, &ctime, &fi.NLink)
 	size += 27
 	fi.Type = uint8(mode >> 12)
 	fi.Mode = os.FileMode(mode & 0x0FFF)
@@ -712,5 +716,76 @@ readDev:
 	UnPack(buf[size:], &dev)
 	fi.Size = uint64(dev)
 	size += 4
+	return
+}
+
+// flags 01 read 02 write 04
+func (c *Client) Open(inode uint32, flags uint8) (err error) {
+	buf, err := c.doCmd(CLTOMA_FUSE_OPEN, 0, inode, c.uid, 1, c.gid, flags)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	if len(buf) == 5 {
+		err = c.checkBuf(buf, 0, 5)
+		if err != nil {
+			glog.Error(err)
+			return
+		}
+		err = getStatus(buf[4:])
+		glog.Error(err)
+		return
+	}
+	err = c.checkBuf(buf, 0, 31)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	_, _, err = parseFileInfo(inode, buf[4:])
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	return
+}
+
+// mknod and open
+func (c *Client) Create(parent uint32, name string,
+	mode uint16) (fi *FileInfo, err error) {
+	if len(name) > MFS_NAME_MAX {
+		err = fmt.Errorf("name length is too long")
+		glog.Error(err)
+		return
+	}
+	buf, err := c.doCmd(CLTOMA_FUSE_CREATE, 0, parent, uint8(len(name)),
+		name, mode, uint16(0), c.uid, 1, c.gid)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	if len(buf) == 5 {
+		err = c.checkBuf(buf, 0, 5)
+		if err != nil {
+			glog.Error(err)
+			return
+		}
+		err = getStatus(buf[4:])
+		glog.Error(err)
+		return
+	}
+	err = c.checkBuf(buf, 0, 35)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	var inode uint32
+	UnPack(buf[4:], &inode)
+	_, fi, err = parseFileInfo(inode, buf[8:])
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	glog.V(8).Infof("create name %s inode %d mode %o parent %d",
+		name, inode, mode, parent)
 	return
 }

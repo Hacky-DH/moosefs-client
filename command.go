@@ -202,6 +202,16 @@ const CLTOMA_FUSE_QUOTACONTROL = 476
 // cursize:64 currealsize:64 (size = 93, version >= 3.0.9)
 // msgid:32 status:8
 
+const CLTOMA_FUSE_CREATE = 482
+
+// CLTOMA
+// msgid:32 inode:32 name:NAME mode:16 uid:32 gid:32 (version < 2.0.0)
+// msgid:32 inode:32 name:NAME mode:16 umask:16 uid:32 gcnt:32 gcnt * [ gid:32 ]
+// (version >= 2.0.0)
+// MATOCL
+// msgid:32 status:8
+// msgid:32 inode:32 attr:ATTR
+
 const CLTOMA_INFO = 510
 
 // MATOCL:
