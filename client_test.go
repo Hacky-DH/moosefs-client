@@ -243,3 +243,22 @@ func TestDirStats(t *testing.T) {
 		}
 	})
 }
+
+func TestRWChunk(t *testing.T) {
+	t.Skip()
+	session(t, func(c *Client) {
+		_, err := c.ReadChunk(54, 0, CHUNKOPFLAG_CANMODTIME)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cs, err := c.WriteChunk(54, 0, CHUNKOPFLAG_CANMODTIME)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = c.WriteChunkEnd(cs.ChunkId, 54, 0, cs.Length,
+			CHUNKOPFLAG_CANMODTIME)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}

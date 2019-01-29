@@ -1020,3 +1020,88 @@ const (
 	CHUNKOPFLAG_CONTINUEOP
 	CHUNKOPFLAG_CANUSERESERVESPACE
 )
+
+func (c *Client) rwChunk(cmd, inode, index uint32,
+	flags uint8) (cs *CSData, err error) {
+	buf, err := c.doCmd(cmd, 0, inode, index, flags)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	if len(buf) == 5 {
+		err = c.checkBuf(buf, 0, 5)
+		if err != nil {
+			glog.Error(err)
+			return
+		}
+		err = getStatus(buf[4:])
+		glog.Error(err)
+		return
+	}
+	err = c.checkBuf(buf, 0, 25)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	cs = new(CSData)
+	UnPack(buf[4:], &cs.ProtocolId, &cs.Length, &cs.ChunkId, &cs.Version)
+	if ((cs.ProtocolId == 1) && ((len(buf)-25)%10 != 0)) ||
+		((cs.ProtocolId == 2) && ((len(buf)-25)%14 != 0)) {
+		err = fmt.Errorf("got wrong size %d from mfsmaster", len(buf))
+		return
+	}
+	pos := 25
+	cs.CSItems = make(CSItemMap)
+	for pos < len(buf) {
+		item := new(CSItem)
+		if cs.ProtocolId == 2 {
+			UnPack(buf[pos:], &item.Ip, &item.Port, &item.Version, &item.LabelMask)
+			pos += 14
+		} else {
+			UnPack(buf[pos:], &item.Ip, &item.Port, &item.Version)
+			pos += 10
+		}
+		glog.V(10).Infof("cs data item: ip %x port %d ver %x mask %d",
+			item.Ip, item.Port, item.Version, item.LabelMask)
+		cs.CSItems[item.Ip] = item
+	}
+	op := "read"
+	if cmd == CLTOMA_FUSE_WRITE_CHUNK {
+		op = "write"
+	}
+	glog.V(8).Infof("%s chunk inode %d ptlid %d len %d cid %d ver %x dlen %d",
+		op, inode, cs.ProtocolId, cs.Length, cs.ChunkId, cs.Version, len(cs.CSItems))
+	return
+}
+
+func (c *Client) ReadChunk(inode, index uint32,
+	flags uint8) (cs *CSData, err error) {
+	return c.rwChunk(CLTOMA_FUSE_READ_CHUNK, inode, index, flags)
+}
+
+func (c *Client) WriteChunk(inode, index uint32,
+	flags uint8) (cs *CSData, err error) {
+	return c.rwChunk(CLTOMA_FUSE_WRITE_CHUNK, inode, index, flags)
+}
+
+func (c *Client) WriteChunkEnd(chunkId uint64, inode, index uint32,
+	length uint64, flags uint8) (err error) {
+	buf, err := c.doCmd(CLTOMA_FUSE_WRITE_CHUNK_END, 0, chunkId, inode,
+		index, length, flags)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	err = c.checkBuf(buf, 0, 5)
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	err = getStatus(buf[4:])
+	if err != nil {
+		glog.Error(err)
+		return
+	}
+	glog.V(8).Infof("end write chunk inode %d chunkId %d", inode, chunkId)
+	return
+}
