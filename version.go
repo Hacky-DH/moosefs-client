@@ -57,10 +57,10 @@ func (v Version) LessThan(maj uint16, mid, min uint8) bool {
 	return v < ParseVersionInt(maj, mid, min)
 }
 
-func (c *Client) SetVersion(ver uint32) {
+func GetVersion(ver uint32) Version {
 	maj, mid, min := Version(ver).ToInt()
 	if maj >= 2 {
 		min >>= 1
 	}
-	c.Version = ParseVersionInt(maj, mid, min)
+	return ParseVersionInt(maj, mid, min)
 }

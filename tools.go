@@ -16,7 +16,7 @@ func (c *Client) MasterVersion() error {
 	}
 	var ver uint32
 	UnPack(buf, &ver)
-	c.SetVersion(ver)
+	c.Version = GetVersion(ver)
 	if c.Version.LessThan(3, 0, 72) {
 		return fmt.Errorf("client only support mfsmaster version >= 3.0.72")
 	}
