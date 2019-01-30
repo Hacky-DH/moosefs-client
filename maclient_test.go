@@ -247,18 +247,29 @@ func TestDirStats(t *testing.T) {
 func TestRWChunk(t *testing.T) {
 	t.Skip()
 	session(t, func(c *MAClient) {
-		_, err := c.ReadChunk(54, 0, CHUNKOPFLAG_CANMODTIME)
+		n := "testfile"
+		c.Unlink(MFS_ROOT_ID, n)
+		fi, err := c.Create(MFS_ROOT_ID, n, 0744)
 		if err != nil {
 			t.Fatal(err)
 		}
-		cs, err := c.WriteChunk(54, 0, CHUNKOPFLAG_CANMODTIME)
+		err = c.Open(fi.Inode, 7)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = c.WriteChunkEnd(cs.ChunkId, 54, 0, cs.Length,
+		cs, err := c.WriteChunk(fi.Inode, 0, CHUNKOPFLAG_CANMODTIME)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = c.WriteChunkEnd(cs.ChunkId, fi.Inode, 0, cs.Length,
 			CHUNKOPFLAG_CANMODTIME)
 		if err != nil {
 			t.Fatal(err)
 		}
+		_, err = c.ReadChunk(fi.Inode, 0, CHUNKOPFLAG_CANMODTIME)
+		if err != nil {
+			t.Fatal(err)
+		}
+		c.Unlink(MFS_ROOT_ID, n)
 	})
 }
