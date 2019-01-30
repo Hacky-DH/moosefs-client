@@ -95,7 +95,7 @@ func TestStatfs(t *testing.T) {
 func TestAccess(t *testing.T) {
 	t.Skip()
 	session(t, func(c *MAClient) {
-		err := c.Access(1, 0777)
+		err := c.Access(MFS_ROOT_ID, 0777)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -105,11 +105,11 @@ func TestAccess(t *testing.T) {
 func TestLookup(t *testing.T) {
 	t.Skip()
 	session(t, func(c *MAClient) {
-		_, err := c.Lookup(1, ".")
+		_, err := c.Lookup(MFS_ROOT_ID, ".")
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = c.Lookup(1, "notexist")
+		_, err = c.Lookup(MFS_ROOT_ID, "notexist")
 		if err == nil {
 			t.Fatal("unexpect")
 		}
@@ -120,16 +120,16 @@ func TestMkdir(t *testing.T) {
 	t.Skip()
 	session(t, func(c *MAClient) {
 		n := "testdir"
-		c.Rmdir(1, n)
-		_, err := c.Mkdir(1, n, 0755)
+		c.Rmdir(MFS_ROOT_ID, n)
+		_, err := c.Mkdir(MFS_ROOT_ID, n, 0755)
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = c.Lookup(1, n)
+		_, err = c.Lookup(MFS_ROOT_ID, n)
 		if err != nil {
 			t.Fatal(err)
 		}
-		c.Rmdir(1, n)
+		c.Rmdir(MFS_ROOT_ID, n)
 	})
 }
 
@@ -137,23 +137,23 @@ func TestMknod(t *testing.T) {
 	t.Skip()
 	session(t, func(c *MAClient) {
 		n := "testfile"
-		c.Unlink(1, n)
-		_, err := c.Mknod(1, n, 0744)
+		c.Unlink(MFS_ROOT_ID, n)
+		_, err := c.Mknod(MFS_ROOT_ID, n, 0744)
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = c.Lookup(1, n)
+		_, err = c.Lookup(MFS_ROOT_ID, n)
 		if err != nil {
 			t.Fatal(err)
 		}
-		c.Unlink(1, n)
+		c.Unlink(MFS_ROOT_ID, n)
 	})
 }
 
 func TestReaddir(t *testing.T) {
 	t.Skip()
 	session(t, func(c *MAClient) {
-		_, err := c.Readdir(1)
+		_, err := c.Readdir(MFS_ROOT_ID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -164,8 +164,8 @@ func TestCreate(t *testing.T) {
 	t.Skip()
 	session(t, func(c *MAClient) {
 		n := "testfile"
-		c.Unlink(1, n)
-		fi, err := c.Create(1, n, 0744)
+		c.Unlink(MFS_ROOT_ID, n)
+		fi, err := c.Create(MFS_ROOT_ID, n, 0744)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -173,7 +173,7 @@ func TestCreate(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		c.Unlink(1, n)
+		c.Unlink(MFS_ROOT_ID, n)
 	})
 }
 
@@ -181,8 +181,8 @@ func TestAttr(t *testing.T) {
 	t.Skip()
 	session(t, func(c *MAClient) {
 		n := "testfile"
-		c.Unlink(1, n)
-		fi, err := c.Create(1, n, 0744)
+		c.Unlink(MFS_ROOT_ID, n)
+		fi, err := c.Create(MFS_ROOT_ID, n, 0744)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -194,7 +194,7 @@ func TestAttr(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		c.Unlink(1, n)
+		c.Unlink(MFS_ROOT_ID, n)
 	})
 }
 
@@ -212,8 +212,8 @@ func TestPurge(t *testing.T) {
 	t.Skip()
 	session(t, func(c *MAClient) {
 		n := "testfile"
-		c.Unlink(1, n)
-		fi, err := c.Create(1, n, 0744)
+		c.Unlink(MFS_ROOT_ID, n)
+		fi, err := c.Create(MFS_ROOT_ID, n, 0744)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -227,7 +227,7 @@ func TestPurge(t *testing.T) {
 func TestReaddirAttr(t *testing.T) {
 	t.Skip()
 	session(t, func(c *MAClient) {
-		_, err := c.ReaddirAttr(1)
+		_, err := c.ReaddirAttr(MFS_ROOT_ID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -237,7 +237,7 @@ func TestReaddirAttr(t *testing.T) {
 func TestDirStats(t *testing.T) {
 	t.Skip()
 	session(t, func(c *MAClient) {
-		_, err := c.GetDirStats(1)
+		_, err := c.GetDirStats(MFS_ROOT_ID)
 		if err != nil {
 			t.Fatal(err)
 		}
