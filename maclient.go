@@ -13,7 +13,8 @@ import (
 	"time"
 )
 
-type Client struct {
+// mfs master client
+type MAClient struct {
 	conn      net.Conn
 	addr      string
 	Password  string
@@ -26,8 +27,8 @@ type Client struct {
 	Version
 }
 
-func NewClientPwd(addr, pwd string, heartbeat bool) (c *Client) {
-	c = &Client{
+func NewMAClientPwd(addr, pwd string, heartbeat bool) (c *MAClient) {
+	c = &MAClient{
 		Password: pwd,
 		uid:      uint32(os.Getuid()),
 		gid:      uint32(os.Getgid()),
@@ -45,11 +46,11 @@ func NewClientPwd(addr, pwd string, heartbeat bool) (c *Client) {
 	return
 }
 
-func NewClient(addr string) *Client {
-	return NewClientPwd(addr, "", true)
+func NewMAClient(addr string) *MAClient {
+	return NewMAClientPwd(addr, "", true)
 }
 
-func (c *Client) Connect() (err error) {
+func (c *MAClient) Connect() (err error) {
 	if c.conn != nil {
 		return
 	}
@@ -72,14 +73,14 @@ func (c *Client) Connect() (err error) {
 	return
 }
 
-func (c *Client) Close() {
+func (c *MAClient) Close() {
 	if c.conn != nil {
 		c.conn.Close()
 		c.conn = nil
 	}
 }
 
-func (c *Client) heartbeat() {
+func (c *MAClient) heartbeat() {
 	ticker := time.NewTicker(time.Second * 10)
 	defer ticker.Stop()
 	nop := func() error {
@@ -106,7 +107,7 @@ func (c *Client) heartbeat() {
 	}
 }
 
-func (c *Client) Send(msg []byte) error {
+func (c *MAClient) Send(msg []byte) error {
 	if err := c.Connect(); err != nil {
 		return fmt.Errorf("connect to mfs master error %s", err.Error())
 	}
@@ -124,7 +125,7 @@ func (c *Client) Send(msg []byte) error {
 	return nil
 }
 
-func (c *Client) Recv(buf []byte) (n int, err error) {
+func (c *MAClient) Recv(buf []byte) (n int, err error) {
 	if err = c.Connect(); err != nil {
 		fmt.Errorf("connect to mfs master error %s", err.Error())
 		return
@@ -138,7 +139,7 @@ func (c *Client) Recv(buf []byte) (n int, err error) {
 	return
 }
 
-func (c *Client) doCmd(cmd uint32, args ...interface{}) (r []byte, err error) {
+func (c *MAClient) doCmd(cmd uint32, args ...interface{}) (r []byte, err error) {
 	msg := PackCmd(cmd, args...)
 	if err = c.Send(msg); err != nil {
 		err = fmt.Errorf("send error %s", err.Error())
@@ -184,7 +185,7 @@ func getStatus(buf []byte) (err error) {
 	return
 }
 
-func (c *Client) checkBuf(buf []byte, id, minsize int) (err error) {
+func (c *MAClient) checkBuf(buf []byte, id, minsize int) (err error) {
 	if len(buf) >= 4 {
 		var d uint32
 		UnPack(buf[:4], &d)
@@ -200,7 +201,7 @@ func (c *Client) checkBuf(buf []byte, id, minsize int) (err error) {
 	return
 }
 
-func (c *Client) CreateSession() (err error) {
+func (c *MAClient) CreateSession() (err error) {
 	err = c.MasterVersion()
 	if err != nil {
 		glog.Error(err)
@@ -258,7 +259,7 @@ func (c *Client) CreateSession() (err error) {
 	return
 }
 
-func (c *Client) CloseSession() (err error) {
+func (c *MAClient) CloseSession() (err error) {
 	if c.sessionId == 0 {
 		return
 	}
@@ -278,7 +279,7 @@ func (c *Client) CloseSession() (err error) {
 	return
 }
 
-func (c *Client) RemoveSession(sessionId uint32) (err error) {
+func (c *MAClient) RemoveSession(sessionId uint32) (err error) {
 	buf, err := c.doCmd(CLTOMA_SESSION_COMMAND, uint8(0), sessionId)
 	if err != nil {
 		glog.Error(err)
@@ -293,7 +294,7 @@ func (c *Client) RemoveSession(sessionId uint32) (err error) {
 	return
 }
 
-func (c *Client) ListSession() (ids []uint32, err error) {
+func (c *MAClient) ListSession() (ids []uint32, err error) {
 	buf, err := c.doCmd(CLTOMA_SESSION_LIST, uint8(2))
 	if err != nil {
 		glog.Error(err)
@@ -338,7 +339,7 @@ const (
 	QuotaDel
 )
 
-func (c *Client) QuotaControl(info *QuotaInfo, mode QuotaMode) (err error) {
+func (c *MAClient) QuotaControl(info *QuotaInfo, mode QuotaMode) (err error) {
 	if info == nil {
 		return
 	}
@@ -391,7 +392,7 @@ type StatInfo struct {
 	Inodes        uint32
 }
 
-func (c *Client) Statfs() (st *StatInfo, err error) {
+func (c *MAClient) Statfs() (st *StatInfo, err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_STATFS, 0)
 	if err != nil {
 		glog.Error(err)
@@ -408,7 +409,7 @@ func (c *Client) Statfs() (st *StatInfo, err error) {
 	return
 }
 
-func (c *Client) Access(inode uint32, mode uint16) (err error) {
+func (c *MAClient) Access(inode uint32, mode uint16) (err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_ACCESS, 0, inode, c.uid, 1, c.gid, mode)
 	if err != nil {
 		glog.Error(err)
@@ -427,7 +428,7 @@ func (c *Client) Access(inode uint32, mode uint16) (err error) {
 	return
 }
 
-func (c *Client) Lookup(parent uint32, name string) (inode uint32, err error) {
+func (c *MAClient) Lookup(parent uint32, name string) (inode uint32, err error) {
 	if len(name) > MFS_NAME_MAX {
 		err = fmt.Errorf("name length is too long")
 		glog.Error(err)
@@ -458,7 +459,7 @@ func (c *Client) Lookup(parent uint32, name string) (inode uint32, err error) {
 	return
 }
 
-func (c *Client) Mkdir(parent uint32, name string,
+func (c *MAClient) Mkdir(parent uint32, name string,
 	mode uint16) (fi *FileInfo, err error) {
 	if len(name) > MFS_NAME_MAX {
 		err = fmt.Errorf("name length is too long")
@@ -497,7 +498,7 @@ func (c *Client) Mkdir(parent uint32, name string,
 	return
 }
 
-func (c *Client) Mknod(parent uint32, name string,
+func (c *MAClient) Mknod(parent uint32, name string,
 	mode uint16) (fi *FileInfo, err error) {
 	if len(name) > MFS_NAME_MAX {
 		err = fmt.Errorf("name length is too long")
@@ -536,7 +537,7 @@ func (c *Client) Mknod(parent uint32, name string,
 	return
 }
 
-func (c *Client) remove(parent uint32, name string, cmd uint32) (err error) {
+func (c *MAClient) remove(parent uint32, name string, cmd uint32) (err error) {
 	if len(name) > MFS_NAME_MAX {
 		err = fmt.Errorf("name length is too long")
 		glog.Error(err)
@@ -562,11 +563,11 @@ func (c *Client) remove(parent uint32, name string, cmd uint32) (err error) {
 	return
 }
 
-func (c *Client) Rmdir(parent uint32, name string) (err error) {
+func (c *MAClient) Rmdir(parent uint32, name string) (err error) {
 	return c.remove(parent, name, CLTOMA_FUSE_RMDIR)
 }
 
-func (c *Client) Unlink(parent uint32, name string) (err error) {
+func (c *MAClient) Unlink(parent uint32, name string) (err error) {
 	return c.remove(parent, name, CLTOMA_FUSE_UNLINK)
 }
 
@@ -578,7 +579,7 @@ type ReaddirInfo struct {
 
 type ReaddirInfoMap map[uint32]*ReaddirInfo
 
-func (c *Client) Readdir(parent uint32) (infoMap ReaddirInfoMap, err error) {
+func (c *MAClient) Readdir(parent uint32) (infoMap ReaddirInfoMap, err error) {
 	//max entries 0xffff
 	buf, err := c.doCmd(CLTOMA_FUSE_READDIR, 0, parent, c.uid, 1, c.gid,
 		uint8(0), 0xffff, uint64(0))
@@ -628,7 +629,7 @@ type ReaddirInfoAttr struct {
 
 type ReaddirInfoAttrMap map[uint32]*ReaddirInfoAttr
 
-func (c *Client) ReaddirAttr(parent uint32) (infoMap ReaddirInfoAttrMap, err error) {
+func (c *MAClient) ReaddirAttr(parent uint32) (infoMap ReaddirInfoAttrMap, err error) {
 	//max entries 0xffff
 	buf, err := c.doCmd(CLTOMA_FUSE_READDIR, 0, parent, c.uid, 1, c.gid,
 		uint8(1), 0xffff, uint64(0))
@@ -781,7 +782,7 @@ readDev:
 }
 
 // flags 01 read 02 write 04
-func (c *Client) Open(inode uint32, flags uint8) (err error) {
+func (c *MAClient) Open(inode uint32, flags uint8) (err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_OPEN, 0, inode, c.uid, 1, c.gid, flags)
 	if err != nil {
 		glog.Error(err)
@@ -812,7 +813,7 @@ func (c *Client) Open(inode uint32, flags uint8) (err error) {
 }
 
 // mknod and open
-func (c *Client) Create(parent uint32, name string,
+func (c *MAClient) Create(parent uint32, name string,
 	mode uint16) (fi *FileInfo, err error) {
 	if len(name) > MFS_NAME_MAX {
 		err = fmt.Errorf("name length is too long")
@@ -852,7 +853,7 @@ func (c *Client) Create(parent uint32, name string,
 	return
 }
 
-func (c *Client) GetAttr(inode uint32) (fi *FileInfo, err error) {
+func (c *MAClient) GetAttr(inode uint32) (fi *FileInfo, err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_GETATTR, 0, inode)
 	if err != nil {
 		glog.Error(err)
@@ -894,7 +895,7 @@ const (
 	SET_ATIME_NOW_FLAG
 )
 
-func (c *Client) SetAttr(inode uint32, setmask uint8, mode uint16,
+func (c *MAClient) SetAttr(inode uint32, setmask uint8, mode uint16,
 	uid, gid, atime, mtime uint32) (fi *FileInfo, err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_SETATTR, 0, inode, uint8(0), c.uid, 1, c.gid,
 		setmask, mode, uid, gid, atime, mtime, uint8(0))
@@ -926,15 +927,15 @@ func (c *Client) SetAttr(inode uint32, setmask uint8, mode uint16,
 	return
 }
 
-func (c *Client) Chmod(inode uint32, mode uint16) (fi *FileInfo, err error) {
+func (c *MAClient) Chmod(inode uint32, mode uint16) (fi *FileInfo, err error) {
 	return c.SetAttr(inode, SET_MODE_FLAG, mode, 0, 0, 0, 0)
 }
 
-func (c *Client) Chown(inode uint32, uid, gid uint32) (fi *FileInfo, err error) {
+func (c *MAClient) Chown(inode uint32, uid, gid uint32) (fi *FileInfo, err error) {
 	return c.SetAttr(inode, SET_UID_FLAG|SET_GID_FLAG, 0, uid, gid, 0, 0)
 }
 
-func (c *Client) Undel(inode uint32) (err error) {
+func (c *MAClient) Undel(inode uint32) (err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_UNDEL, 0, inode)
 	if err != nil {
 		glog.Error(err)
@@ -953,7 +954,7 @@ func (c *Client) Undel(inode uint32) (err error) {
 	return
 }
 
-func (c *Client) Purge(inode uint32) (err error) {
+func (c *MAClient) Purge(inode uint32) (err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_PURGE, 0, inode)
 	if err != nil {
 		glog.Error(err)
@@ -983,7 +984,7 @@ type DirStats struct {
 	RSize  uint64
 }
 
-func (c *Client) GetDirStats(inode uint32) (ds *DirStats, err error) {
+func (c *MAClient) GetDirStats(inode uint32) (ds *DirStats, err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_GETDIRSTATS, 0, inode)
 	if err != nil {
 		glog.Error(err)
@@ -1021,7 +1022,7 @@ const (
 	CHUNKOPFLAG_CANUSERESERVESPACE
 )
 
-func (c *Client) rwChunk(cmd, inode, index uint32,
+func (c *MAClient) rwChunk(cmd, inode, index uint32,
 	flags uint8) (cs *CSData, err error) {
 	buf, err := c.doCmd(cmd, 0, inode, index, flags)
 	if err != nil {
@@ -1074,17 +1075,17 @@ func (c *Client) rwChunk(cmd, inode, index uint32,
 	return
 }
 
-func (c *Client) ReadChunk(inode, index uint32,
+func (c *MAClient) ReadChunk(inode, index uint32,
 	flags uint8) (cs *CSData, err error) {
 	return c.rwChunk(CLTOMA_FUSE_READ_CHUNK, inode, index, flags)
 }
 
-func (c *Client) WriteChunk(inode, index uint32,
+func (c *MAClient) WriteChunk(inode, index uint32,
 	flags uint8) (cs *CSData, err error) {
 	return c.rwChunk(CLTOMA_FUSE_WRITE_CHUNK, inode, index, flags)
 }
 
-func (c *Client) WriteChunkEnd(chunkId uint64, inode, index uint32,
+func (c *MAClient) WriteChunkEnd(chunkId uint64, inode, index uint32,
 	length uint64, flags uint8) (err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_WRITE_CHUNK_END, 0, chunkId, inode,
 		index, length, flags)

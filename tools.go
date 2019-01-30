@@ -5,11 +5,11 @@ import (
 	"github.com/golang/glog"
 )
 
-func NewTools(addr string) *Client {
-	return NewClientPwd(addr, "", false)
+func NewTools(addr string) *MAClient {
+	return NewMAClientPwd(addr, "", false)
 }
 
-func (c *Client) MasterVersion() error {
+func (c *MAClient) MasterVersion() error {
 	buf, err := c.doCmd(ANTOAN_GET_VERSION)
 	if err != nil {
 		return err
@@ -74,7 +74,7 @@ func (info *QuotaInfo) Usage() (current, quota string, retio float64) {
 	return
 }
 
-func (c *Client) UnPackQuota(buf []byte) *QuotaInfo {
+func (c *MAClient) UnPackQuota(buf []byte) *QuotaInfo {
 	if len(buf) <= 102 {
 		return nil
 	}
@@ -94,7 +94,7 @@ func (c *Client) UnPackQuota(buf []byte) *QuotaInfo {
 
 type QuotaInfoMap map[string]*QuotaInfo
 
-func (c *Client) AllQuotaInfo() (quota QuotaInfoMap, err error) {
+func (c *MAClient) AllQuotaInfo() (quota QuotaInfoMap, err error) {
 	err = c.MasterVersion()
 	if err != nil {
 		return

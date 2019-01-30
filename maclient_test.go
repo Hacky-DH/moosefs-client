@@ -12,12 +12,12 @@ func init() {
 	flag.Parse()
 }
 
-func client() *Client {
-	return NewClientPwd("127.0.0.1", "password", false)
+func maclient() *MAClient {
+	return NewMAClientPwd("127.0.0.1", "password", false)
 }
 
-func session(t *testing.T, cb func(*Client)) {
-	c := client()
+func session(t *testing.T, cb func(*MAClient)) {
+	c := maclient()
 	defer c.Close()
 	err := c.CreateSession()
 	if err != nil {
@@ -29,7 +29,7 @@ func session(t *testing.T, cb func(*Client)) {
 
 func TestConnect(t *testing.T) {
 	t.Skip()
-	c := client()
+	c := maclient()
 	if err := c.Connect(); err != nil {
 		t.Error(err)
 	}
@@ -39,7 +39,7 @@ func TestConnect(t *testing.T) {
 
 func TestQuotaControlNoSession(t *testing.T) {
 	t.Skip()
-	c := client()
+	c := maclient()
 	defer c.Close()
 	info := &QuotaInfo{
 		inode: 13,
@@ -53,7 +53,7 @@ func TestQuotaControlNoSession(t *testing.T) {
 
 func TestQuotaControl(t *testing.T) {
 	t.Skip()
-	session(t, func(c *Client) {
+	session(t, func(c *MAClient) {
 		s, _ := ParseBytes("1Ti")
 		info := &QuotaInfo{
 			inode:   13,
@@ -84,7 +84,7 @@ func TestQuotaControl(t *testing.T) {
 
 func TestStatfs(t *testing.T) {
 	t.Skip()
-	session(t, func(c *Client) {
+	session(t, func(c *MAClient) {
 		_, err := c.Statfs()
 		if err != nil {
 			t.Fatal(err)
@@ -94,7 +94,7 @@ func TestStatfs(t *testing.T) {
 
 func TestAccess(t *testing.T) {
 	t.Skip()
-	session(t, func(c *Client) {
+	session(t, func(c *MAClient) {
 		err := c.Access(1, 0777)
 		if err != nil {
 			t.Fatal(err)
@@ -104,7 +104,7 @@ func TestAccess(t *testing.T) {
 
 func TestLookup(t *testing.T) {
 	t.Skip()
-	session(t, func(c *Client) {
+	session(t, func(c *MAClient) {
 		_, err := c.Lookup(1, ".")
 		if err != nil {
 			t.Fatal(err)
@@ -118,7 +118,7 @@ func TestLookup(t *testing.T) {
 
 func TestMkdir(t *testing.T) {
 	t.Skip()
-	session(t, func(c *Client) {
+	session(t, func(c *MAClient) {
 		n := "testdir"
 		c.Rmdir(1, n)
 		_, err := c.Mkdir(1, n, 0755)
@@ -135,7 +135,7 @@ func TestMkdir(t *testing.T) {
 
 func TestMknod(t *testing.T) {
 	t.Skip()
-	session(t, func(c *Client) {
+	session(t, func(c *MAClient) {
 		n := "testfile"
 		c.Unlink(1, n)
 		_, err := c.Mknod(1, n, 0744)
@@ -152,7 +152,7 @@ func TestMknod(t *testing.T) {
 
 func TestReaddir(t *testing.T) {
 	t.Skip()
-	session(t, func(c *Client) {
+	session(t, func(c *MAClient) {
 		_, err := c.Readdir(1)
 		if err != nil {
 			t.Fatal(err)
@@ -162,7 +162,7 @@ func TestReaddir(t *testing.T) {
 
 func TestCreate(t *testing.T) {
 	t.Skip()
-	session(t, func(c *Client) {
+	session(t, func(c *MAClient) {
 		n := "testfile"
 		c.Unlink(1, n)
 		fi, err := c.Create(1, n, 0744)
@@ -179,7 +179,7 @@ func TestCreate(t *testing.T) {
 
 func TestAttr(t *testing.T) {
 	t.Skip()
-	session(t, func(c *Client) {
+	session(t, func(c *MAClient) {
 		n := "testfile"
 		c.Unlink(1, n)
 		fi, err := c.Create(1, n, 0744)
@@ -200,7 +200,7 @@ func TestAttr(t *testing.T) {
 
 func TestRemoveAllSession(t *testing.T) {
 	t.Skip()
-	c := client()
+	c := maclient()
 	defer c.Close()
 	sess, _ := c.ListSession()
 	for _, s := range sess {
@@ -210,7 +210,7 @@ func TestRemoveAllSession(t *testing.T) {
 
 func TestPurge(t *testing.T) {
 	t.Skip()
-	session(t, func(c *Client) {
+	session(t, func(c *MAClient) {
 		n := "testfile"
 		c.Unlink(1, n)
 		fi, err := c.Create(1, n, 0744)
@@ -226,7 +226,7 @@ func TestPurge(t *testing.T) {
 
 func TestReaddirAttr(t *testing.T) {
 	t.Skip()
-	session(t, func(c *Client) {
+	session(t, func(c *MAClient) {
 		_, err := c.ReaddirAttr(1)
 		if err != nil {
 			t.Fatal(err)
@@ -236,7 +236,7 @@ func TestReaddirAttr(t *testing.T) {
 
 func TestDirStats(t *testing.T) {
 	t.Skip()
-	session(t, func(c *Client) {
+	session(t, func(c *MAClient) {
 		_, err := c.GetDirStats(1)
 		if err != nil {
 			t.Fatal(err)
@@ -246,7 +246,7 @@ func TestDirStats(t *testing.T) {
 
 func TestRWChunk(t *testing.T) {
 	t.Skip()
-	session(t, func(c *Client) {
+	session(t, func(c *MAClient) {
 		_, err := c.ReadChunk(54, 0, CHUNKOPFLAG_CANMODTIME)
 		if err != nil {
 			t.Fatal(err)
