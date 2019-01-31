@@ -3,6 +3,7 @@ package mfscli
 import (
 	"fmt"
 	"github.com/golang/glog"
+	"hash/crc32"
 	"io"
 	"net"
 	"sync"
@@ -153,7 +154,94 @@ func (c *CSClient) Recv(buf []byte) (n int, err error) {
 	return
 }
 
-func (d *CSData) Write(buf []byte, off uint32) (n int, err error) {
-	//_cspool.Get()
+func (d *CSData) Write(buf []byte, off uint32) (n uint32, err error) {
+	if len(d.CSItems) == 0 {
+		err = fmt.Errorf("no chunkserver found")
+		return
+	}
+	for _, cs := range d.CSItems {
+		var c *CSClient
+		c, err = _cspool.Get(cs)
+		if err != nil {
+			return
+		}
+		css := []interface{}{
+			d.ProtocolId,
+			d.ChunkId,
+			d.Version,
+		}
+		for _, _cs := range d.CSItems {
+			css = append(css, _cs.Ip)
+			css = append(css, _cs.Port)
+		}
+		msg := PackCmd(CLTOCS_WRITE, css...)
+		if err = c.Send(msg); err != nil {
+			err = fmt.Errorf("send to cs error %v", err)
+			return
+		}
+		var wid uint32
+		pos := uint16((off & MFSCHUNKMASK) >> MFSBLOCKBITS)
+		from := uint16(off & MFSBLOCKMASK)
+		size := uint32(len(buf))
+		for size > 0 {
+			sz := MFSBLOCKSIZE - uint32(from)
+			if sz > size {
+				sz = size
+			}
+			err = d.WriteBlock(c, wid, pos, from, buf[n:n+sz])
+			if err != nil {
+				return
+			}
+			size -= sz
+			n += sz
+			pos += 1
+			from = 0
+			wid += 1
+		}
+		// just write to one cs
+		return
+	}
+	return
+}
+
+func (d *CSData) WriteBlock(c *CSClient, wid uint32, blockNum, off uint16,
+	buf []byte) (err error) {
+	crc := crc32.ChecksumIEEE(buf)
+	msg := PackCmd(CLTOCS_WRITE_DATA, d.ChunkId, wid, blockNum, off,
+		len(buf), crc, buf)
+	if err = c.Send(msg); err != nil {
+		err = fmt.Errorf("send data to cs error %v", err)
+		return
+	}
+	rbuf := make([]byte, 21)
+	var rcmd, size uint32 = ANTOAN_NOP, 4
+	for rcmd == ANTOAN_NOP && size == 4 {
+		n, e := c.Recv(rbuf)
+		if e != nil {
+			err = fmt.Errorf("recv from cs error %v", e)
+			return
+		}
+		if n < 21 {
+			err = fmt.Errorf("recv from cs size is too short")
+			return
+		}
+		UnPack(rbuf, &rcmd, &size)
+	}
+	if rcmd != CSTOCL_WRITE_STATUS {
+		err = fmt.Errorf("recv from cs bad command %d", rcmd)
+		return
+	}
+	var cid uint64
+	var wrid uint32
+	var status uint8
+	UnPack(rbuf, &cid, &wrid, &status)
+	if cid != d.ChunkId || wid != wrid {
+		err = fmt.Errorf("recv from cs bad cid %d wid %d", cid, wrid)
+		return
+	}
+	if status != 0 {
+		err = fmt.Errorf("write block %s", MFSStrerror(status))
+		return
+	}
 	return
 }
