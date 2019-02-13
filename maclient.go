@@ -242,14 +242,10 @@ func (c *MAClient) CreateSession() (err error) {
 			return
 		}
 	}
-	if len(buf) < 43 {
-		err = fmt.Errorf("got wrong size %d<43 from mfsmaster", len(buf))
-		return
-	}
-	var id uint32
-	UnPack(buf[4:], &id)
-	if 0 != c.sessionId {
+	err = c.checkBuf(buf, 0, 43)
+	if err != nil {
 		c.CloseSession()
+		return
 	}
 	c.sessionId = id
 	glog.V(8).Infof("create new session id %d", id)
