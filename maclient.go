@@ -242,10 +242,14 @@ func (c *MAClient) CreateSession() (err error) {
 			return
 		}
 	}
-	err = c.checkBuf(buf, 0, 43)
-	if err != nil {
-		c.CloseSession()
+	if len(buf) < 43 {
+		err = fmt.Errorf("got wrong size %d<43 from mfsmaster", len(buf))
 		return
+	}
+	var id uint32
+	UnPack(buf[4:], &id)
+	if 0 != c.sessionId {
+		c.CloseSession()
 	}
 	c.sessionId = id
 	glog.V(8).Infof("create new session id %d", id)
@@ -366,6 +370,22 @@ func (c *MAClient) QuotaControl(info *QuotaInfo, mode QuotaMode) (err error) {
 	return
 }
 
+func checkInodeName(inode *uint32, name *string) (err error) {
+	if inode != nil {
+		if *inode >= MIN_SPECIAL_INODE {
+			err = fmt.Errorf("invalid inode %d", *inode)
+			return
+		}
+	}
+	if name != nil {
+		if len(*name) > MFS_NAME_MAX {
+			err = fmt.Errorf("name %s length is too long", *name)
+			return
+		}
+	}
+	return
+}
+
 type StatInfo struct {
 	TotalSpace    uint64
 	AvailSpace    uint64
@@ -390,6 +410,9 @@ func (c *MAClient) Statfs() (st *StatInfo, err error) {
 }
 
 func (c *MAClient) Access(inode uint32, mode uint16) (err error) {
+	if err = checkInodeName(&inode, nil); err != nil {
+		return
+	}
 	buf, err := c.doCmd(CLTOMA_FUSE_ACCESS, 0, inode, c.uid, 1, c.gid, mode)
 	if err != nil {
 		return
@@ -406,8 +429,7 @@ func (c *MAClient) Access(inode uint32, mode uint16) (err error) {
 }
 
 func (c *MAClient) Lookup(parent uint32, name string) (inode uint32, err error) {
-	if len(name) > MFS_NAME_MAX {
-		err = fmt.Errorf("name length is too long")
+	if err = checkInodeName(&parent, &name); err != nil {
 		return
 	}
 	buf, err := c.doCmd(CLTOMA_FUSE_LOOKUP, 0, parent, uint8(len(name)),
@@ -433,8 +455,7 @@ func (c *MAClient) Lookup(parent uint32, name string) (inode uint32, err error) 
 
 func (c *MAClient) Mkdir(parent uint32, name string,
 	mode uint16) (fi *FileInfo, err error) {
-	if len(name) > MFS_NAME_MAX {
-		err = fmt.Errorf("name length is too long")
+	if err = checkInodeName(&parent, &name); err != nil {
 		return
 	}
 	buf, err := c.doCmd(CLTOMA_FUSE_MKDIR, 0, parent, uint8(len(name)),
@@ -466,8 +487,7 @@ func (c *MAClient) Mkdir(parent uint32, name string,
 
 func (c *MAClient) Mknod(parent uint32, name string,
 	mode uint16) (fi *FileInfo, err error) {
-	if len(name) > MFS_NAME_MAX {
-		err = fmt.Errorf("name length is too long")
+	if err = checkInodeName(&parent, &name); err != nil {
 		return
 	}
 	buf, err := c.doCmd(CLTOMA_FUSE_MKNOD, 0, parent, uint8(len(name)),
@@ -498,8 +518,7 @@ func (c *MAClient) Mknod(parent uint32, name string,
 }
 
 func (c *MAClient) remove(parent uint32, name string, cmd uint32) (err error) {
-	if len(name) > MFS_NAME_MAX {
-		err = fmt.Errorf("name length is too long")
+	if err = checkInodeName(&parent, &name); err != nil {
 		return
 	}
 	buf, err := c.doCmd(cmd, 0, parent, uint8(len(name)),
@@ -536,6 +555,9 @@ type ReaddirInfo struct {
 type ReaddirInfoMap map[uint32]*ReaddirInfo
 
 func (c *MAClient) Readdir(parent uint32) (infoMap ReaddirInfoMap, err error) {
+	if err = checkInodeName(&parent, nil); err != nil {
+		return
+	}
 	//max entries 0xffff
 	buf, err := c.doCmd(CLTOMA_FUSE_READDIR, 0, parent, c.uid, 1, c.gid,
 		uint8(0), 0xffff, uint64(0))
@@ -582,6 +604,9 @@ type ReaddirInfoAttr struct {
 type ReaddirInfoAttrMap map[uint32]*ReaddirInfoAttr
 
 func (c *MAClient) ReaddirAttr(parent uint32) (infoMap ReaddirInfoAttrMap, err error) {
+	if err = checkInodeName(&parent, nil); err != nil {
+		return
+	}
 	//max entries 0xffff
 	buf, err := c.doCmd(CLTOMA_FUSE_READDIR, 0, parent, c.uid, 1, c.gid,
 		uint8(1), 0xffff, uint64(0))
@@ -729,6 +754,9 @@ readDev:
 
 // flags 01 read 02 write 04
 func (c *MAClient) Open(inode uint32, flags uint8) (err error) {
+	if err = checkInodeName(&inode, nil); err != nil {
+		return
+	}
 	buf, err := c.doCmd(CLTOMA_FUSE_OPEN, 0, inode, c.uid, 1, c.gid, flags)
 	if err != nil {
 		return
@@ -756,8 +784,7 @@ func (c *MAClient) Open(inode uint32, flags uint8) (err error) {
 // mknod and open
 func (c *MAClient) Create(parent uint32, name string,
 	mode uint16) (fi *FileInfo, err error) {
-	if len(name) > MFS_NAME_MAX {
-		err = fmt.Errorf("name length is too long")
+	if err = checkInodeName(&parent, &name); err != nil {
 		return
 	}
 	buf, err := c.doCmd(CLTOMA_FUSE_CREATE, 0, parent, uint8(len(name)),
@@ -789,6 +816,9 @@ func (c *MAClient) Create(parent uint32, name string,
 }
 
 func (c *MAClient) GetAttr(inode uint32) (fi *FileInfo, err error) {
+	if err = checkInodeName(&inode, nil); err != nil {
+		return
+	}
 	buf, err := c.doCmd(CLTOMA_FUSE_GETATTR, 0, inode)
 	if err != nil {
 		return
@@ -827,6 +857,9 @@ const (
 
 func (c *MAClient) SetAttr(inode uint32, setmask uint8, mode uint16,
 	uid, gid, atime, mtime uint32) (fi *FileInfo, err error) {
+	if err = checkInodeName(&inode, nil); err != nil {
+		return
+	}
 	buf, err := c.doCmd(CLTOMA_FUSE_SETATTR, 0, inode, uint8(0), c.uid, 1, c.gid,
 		setmask, mode, uid, gid, atime, mtime, uint8(0))
 	if err != nil {
@@ -861,6 +894,9 @@ func (c *MAClient) Chown(inode uint32, uid, gid uint32) (fi *FileInfo, err error
 }
 
 func (c *MAClient) Undel(inode uint32) (err error) {
+	if err = checkInodeName(&inode, nil); err != nil {
+		return
+	}
 	buf, err := c.doCmd(CLTOMA_FUSE_UNDEL, 0, inode)
 	if err != nil {
 		return
@@ -877,6 +913,9 @@ func (c *MAClient) Undel(inode uint32) (err error) {
 }
 
 func (c *MAClient) Purge(inode uint32) (err error) {
+	if err = checkInodeName(&inode, nil); err != nil {
+		return
+	}
 	buf, err := c.doCmd(CLTOMA_FUSE_PURGE, 0, inode)
 	if err != nil {
 		return
@@ -904,6 +943,9 @@ type DirStats struct {
 }
 
 func (c *MAClient) GetDirStats(inode uint32) (ds *DirStats, err error) {
+	if err = checkInodeName(&inode, nil); err != nil {
+		return
+	}
 	buf, err := c.doCmd(CLTOMA_FUSE_GETDIRSTATS, 0, inode)
 	if err != nil {
 		return
@@ -939,6 +981,9 @@ const (
 
 func (c *MAClient) rwChunk(cmd, inode, index uint32,
 	flags uint8) (cs *CSData, err error) {
+	if err = checkInodeName(&inode, nil); err != nil {
+		return
+	}
 	buf, err := c.doCmd(cmd, 0, inode, index, flags)
 	if err != nil {
 		return
@@ -998,6 +1043,9 @@ func (c *MAClient) WriteChunk(inode, index uint32,
 
 func (c *MAClient) WriteChunkEnd(chunkId uint64, inode, index uint32,
 	length uint64, flags uint8) (err error) {
+	if err = checkInodeName(&inode, nil); err != nil {
+		return
+	}
 	buf, err := c.doCmd(CLTOMA_FUSE_WRITE_CHUNK_END, 0, chunkId, inode,
 		index, length, flags)
 	if err != nil {
