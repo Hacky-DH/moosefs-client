@@ -57,8 +57,8 @@ func (c *MAClient) Connect() (err error) {
 	var conn net.Conn
 	c.Lock()
 	defer c.Unlock()
-	for i := 0; i < 3; i++ {
-		conn, err = net.DialTimeout("tcp", c.addr, time.Minute)
+	for i := 0; i < TCP_RETRY_TIMES; i++ {
+		conn, err = net.DialTimeout("tcp", c.addr, TCP_CONNECT_TIMEOUT)
 		if err == nil {
 			c.conn = conn
 			break
@@ -81,7 +81,7 @@ func (c *MAClient) Close() {
 }
 
 func (c *MAClient) heartbeat() {
-	ticker := time.NewTicker(time.Second * 10)
+	ticker := time.NewTicker(MASTER_HEARTBEAT_INTERVAL)
 	defer ticker.Stop()
 	nop := func() error {
 		if err := c.Connect(); err != nil {
@@ -113,6 +113,7 @@ func (c *MAClient) Send(msg []byte) error {
 	c.Lock()
 	defer c.Unlock()
 	startSend := 0
+	c.conn.SetDeadline(time.Now().Add(TCP_RW_TIMEOUT))
 	for startSend < len(msg) {
 		sent, err := c.conn.Write(msg[startSend:])
 		if err != nil {
@@ -131,6 +132,7 @@ func (c *MAClient) Recv(buf []byte) (n int, err error) {
 	}
 	c.Lock()
 	defer c.Unlock()
+	c.conn.SetDeadline(time.Now().Add(TCP_RW_TIMEOUT))
 	n, err = io.ReadFull(c.conn, buf)
 	if err != nil {
 		c.Close()

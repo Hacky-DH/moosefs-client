@@ -49,11 +49,11 @@ func NewCSClient(t *CSItem) (c *CSClient, err error) {
 	c = new(CSClient)
 	addr := t.addr()
 	var conn net.Conn
-	for i := 0; i < 3; i++ {
-		conn, err = net.DialTimeout("tcp", addr, time.Minute)
+	for i := 0; i < TCP_RETRY_TIMES; i++ {
+		conn, err = net.DialTimeout("tcp", addr, TCP_CONNECT_TIMEOUT)
 		if err == nil {
 			c.conn = conn
-			c.conn.SetDeadline(time.Now().Add(time.Minute))
+			c.conn.SetDeadline(time.Now().Add(TCP_RW_TIMEOUT))
 			break
 		}
 		glog.V(8).Infof("connect chunk master error: %v retry #%d", err, i+1)
@@ -131,6 +131,7 @@ func (c *CSClient) Send(msg []byte) error {
 		return fmt.Errorf("connection to chunkserver is lost")
 	}
 	startSend := 0
+	c.conn.SetDeadline(time.Now().Add(TCP_RW_TIMEOUT))
 	for startSend < len(msg) {
 		sent, err := c.conn.Write(msg[startSend:])
 		if err != nil {
@@ -147,6 +148,7 @@ func (c *CSClient) Recv(buf []byte) (n int, err error) {
 		err = fmt.Errorf("connection to chunkserver is lost")
 		return
 	}
+	c.conn.SetDeadline(time.Now().Add(TCP_RW_TIMEOUT))
 	n, err = io.ReadFull(c.conn, buf)
 	if err != nil {
 		c.Close()

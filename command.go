@@ -1,5 +1,12 @@
 package mfscli
 
+import "time"
+
+const TCP_RETRY_TIMES = 3
+const TCP_CONNECT_TIMEOUT = 30 * time.Second
+const TCP_RW_TIMEOUT = time.Minute
+const MASTER_HEARTBEAT_INTERVAL = 5 * time.Second
+
 const MFS_ROOT_ID = 1
 const MFS_NAME_MAX = 255
 const MFS_SYMLINK_MAX = 4096
