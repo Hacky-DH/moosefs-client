@@ -100,7 +100,6 @@ func (c *MAClient) heartbeat() {
 		select {
 		case <-ticker.C:
 			if err := nop(); err != nil {
-				glog.Error(err)
 				c.Close()
 			}
 		}
@@ -204,7 +203,6 @@ func (c *MAClient) checkBuf(buf []byte, id, minsize int) (err error) {
 func (c *MAClient) CreateSession() (err error) {
 	err = c.MasterVersion()
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	var buf []byte
@@ -230,13 +228,11 @@ func (c *MAClient) CreateSession() (err error) {
 			REGISTER_RECONNECT, c.sessionId, c.Version)
 	}
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	if len(buf) == 1 {
 		err = getStatus(buf)
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		if c.sessionId != 0 {
@@ -246,7 +242,6 @@ func (c *MAClient) CreateSession() (err error) {
 	}
 	if len(buf) < 43 {
 		err = fmt.Errorf("got wrong size %d<43 from mfsmaster", len(buf))
-		glog.Error(err)
 		return
 	}
 	var id uint32
@@ -266,12 +261,10 @@ func (c *MAClient) CloseSession() (err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_REGISTER, FUSE_REGISTER_BLOB_ACL,
 		REGISTER_CLOSESESSION, c.sessionId)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	err = getStatus(buf)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	glog.V(8).Infof("close session id %d", c.sessionId)
@@ -282,12 +275,10 @@ func (c *MAClient) CloseSession() (err error) {
 func (c *MAClient) RemoveSession(sessionId uint32) (err error) {
 	buf, err := c.doCmd(CLTOMA_SESSION_COMMAND, uint8(0), sessionId)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	err = getStatus(buf)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	glog.V(8).Infof("remove session id %d", sessionId)
@@ -297,7 +288,6 @@ func (c *MAClient) RemoveSession(sessionId uint32) (err error) {
 func (c *MAClient) ListSession() (ids []uint32, err error) {
 	buf, err := c.doCmd(CLTOMA_SESSION_LIST, uint8(2))
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	if len(buf) <= 2 {
@@ -307,12 +297,10 @@ func (c *MAClient) ListSession() (ids []uint32, err error) {
 	UnPack(buf, &stats)
 	if stats != 16 {
 		err = fmt.Errorf("list session got wrong stats %d!=16 from mfsmaster", stats)
-		glog.Error(err)
 		return
 	}
 	if len(buf) < 188 {
 		err = fmt.Errorf("list session got small size %d<188 from mfsmaster", len(buf))
-		glog.Error(err)
 		return
 	}
 	ids = make([]uint32, 0)
@@ -358,22 +346,18 @@ func (c *MAClient) QuotaControl(info *QuotaInfo, mode QuotaMode) (err error) {
 		buf, err = c.doCmd(CLTOMA_FUSE_QUOTACONTROL, 0, info.inode, info.qflags)
 	}
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	if len(buf) == 5 {
 		err = c.checkBuf(buf, 0, 5)
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		err = getStatus(buf[4:])
-		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 93)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	UnPack(buf[9:], &info.sinodes, &info.slength, &info.ssize, &info.srealsize,
@@ -395,12 +379,10 @@ type StatInfo struct {
 func (c *MAClient) Statfs() (st *StatInfo, err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_STATFS, 0)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 40)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	st = new(StatInfo)
@@ -412,17 +394,14 @@ func (c *MAClient) Statfs() (st *StatInfo, err error) {
 func (c *MAClient) Access(inode uint32, mode uint16) (err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_ACCESS, 0, inode, c.uid, 1, c.gid, mode)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 5)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	err = getStatus(buf[4:])
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	return
@@ -431,28 +410,23 @@ func (c *MAClient) Access(inode uint32, mode uint16) (err error) {
 func (c *MAClient) Lookup(parent uint32, name string) (inode uint32, err error) {
 	if len(name) > MFS_NAME_MAX {
 		err = fmt.Errorf("name length is too long")
-		glog.Error(err)
 		return
 	}
 	buf, err := c.doCmd(CLTOMA_FUSE_LOOKUP, 0, parent, uint8(len(name)),
 		name, c.uid, 1, c.gid)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	if len(buf) == 5 {
 		err = c.checkBuf(buf, 0, 5)
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		err = getStatus(buf[4:])
-		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 8)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	UnPack(buf[4:], &inode)
@@ -463,35 +437,29 @@ func (c *MAClient) Mkdir(parent uint32, name string,
 	mode uint16) (fi *FileInfo, err error) {
 	if len(name) > MFS_NAME_MAX {
 		err = fmt.Errorf("name length is too long")
-		glog.Error(err)
 		return
 	}
 	buf, err := c.doCmd(CLTOMA_FUSE_MKDIR, 0, parent, uint8(len(name)),
 		name, mode, uint16(0), c.uid, 1, c.gid, uint8(0))
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	if len(buf) == 5 {
 		err = c.checkBuf(buf, 0, 5)
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		err = getStatus(buf[4:])
-		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 35)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	var inode uint32
 	UnPack(buf[4:], &inode)
 	_, fi, err = parseFileInfo(inode, buf[8:])
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	glog.V(8).Infof("mkdir name %s inode %d parent %d", name, inode, parent)
@@ -502,35 +470,29 @@ func (c *MAClient) Mknod(parent uint32, name string,
 	mode uint16) (fi *FileInfo, err error) {
 	if len(name) > MFS_NAME_MAX {
 		err = fmt.Errorf("name length is too long")
-		glog.Error(err)
 		return
 	}
 	buf, err := c.doCmd(CLTOMA_FUSE_MKNOD, 0, parent, uint8(len(name)),
 		name, uint8(1), mode, uint16(0), c.uid, 1, c.gid, 0)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	if len(buf) == 5 {
 		err = c.checkBuf(buf, 0, 5)
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		err = getStatus(buf[4:])
-		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 35)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	var inode uint32
 	UnPack(buf[4:], &inode)
 	_, fi, err = parseFileInfo(inode, buf[8:])
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	glog.V(8).Infof("mknod name %s inode %d parent %d", name, inode, parent)
@@ -540,23 +502,19 @@ func (c *MAClient) Mknod(parent uint32, name string,
 func (c *MAClient) remove(parent uint32, name string, cmd uint32) (err error) {
 	if len(name) > MFS_NAME_MAX {
 		err = fmt.Errorf("name length is too long")
-		glog.Error(err)
 		return
 	}
 	buf, err := c.doCmd(cmd, 0, parent, uint8(len(name)),
 		name, c.uid, 1, c.gid)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 5)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	err = getStatus(buf[4:])
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	glog.V(8).Infof("remove name %s parent %d", name, parent)
@@ -584,23 +542,19 @@ func (c *MAClient) Readdir(parent uint32) (infoMap ReaddirInfoMap, err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_READDIR, 0, parent, c.uid, 1, c.gid,
 		uint8(0), 0xffff, uint64(0))
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	if len(buf) == 5 {
 		err = c.checkBuf(buf, 0, 5)
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		err = getStatus(buf[4:])
-		glog.Error(err)
 		return
 	}
 	// include . and  ..
 	err = c.checkBuf(buf, 0, 27)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	pos := 12
@@ -634,23 +588,19 @@ func (c *MAClient) ReaddirAttr(parent uint32) (infoMap ReaddirInfoAttrMap, err e
 	buf, err := c.doCmd(CLTOMA_FUSE_READDIR, 0, parent, c.uid, 1, c.gid,
 		uint8(1), 0xffff, uint64(0))
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	if len(buf) == 5 {
 		err = c.checkBuf(buf, 0, 5)
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		err = getStatus(buf[4:])
-		glog.Error(err)
 		return
 	}
 	// include . and  ..
 	err = c.checkBuf(buf, 0, 79)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	pos := 12
@@ -668,7 +618,6 @@ func (c *MAClient) ReaddirAttr(parent uint32) (infoMap ReaddirInfoAttrMap, err e
 		pos += 4
 		n, fi, err = parseFileInfo(info.Inode, buf[pos:])
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		info.Info = fi
@@ -726,7 +675,6 @@ func parseFileInfo(inode uint32, buf []byte) (size uint32,
 	fi *FileInfo, err error) {
 	if len(buf) < 27 {
 		err = fmt.Errorf("file info buf length is too short")
-		glog.Error(err)
 		return
 	}
 	fi = new(FileInfo)
@@ -785,27 +733,22 @@ readDev:
 func (c *MAClient) Open(inode uint32, flags uint8) (err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_OPEN, 0, inode, c.uid, 1, c.gid, flags)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	if len(buf) == 5 {
 		err = c.checkBuf(buf, 0, 5)
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		err = getStatus(buf[4:])
-		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 31)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	_, _, err = parseFileInfo(inode, buf[4:])
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	glog.V(8).Infof("open %d", inode)
@@ -817,35 +760,29 @@ func (c *MAClient) Create(parent uint32, name string,
 	mode uint16) (fi *FileInfo, err error) {
 	if len(name) > MFS_NAME_MAX {
 		err = fmt.Errorf("name length is too long")
-		glog.Error(err)
 		return
 	}
 	buf, err := c.doCmd(CLTOMA_FUSE_CREATE, 0, parent, uint8(len(name)),
 		name, mode, uint16(0), c.uid, 1, c.gid)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	if len(buf) == 5 {
 		err = c.checkBuf(buf, 0, 5)
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		err = getStatus(buf[4:])
-		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 35)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	var inode uint32
 	UnPack(buf[4:], &inode)
 	_, fi, err = parseFileInfo(inode, buf[8:])
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	glog.V(8).Infof("create name %s inode %d mode %o parent %d",
@@ -856,27 +793,22 @@ func (c *MAClient) Create(parent uint32, name string,
 func (c *MAClient) GetAttr(inode uint32) (fi *FileInfo, err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_GETATTR, 0, inode)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	if len(buf) == 5 {
 		err = c.checkBuf(buf, 0, 5)
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		err = getStatus(buf[4:])
-		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 31)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	_, fi, err = parseFileInfo(inode, buf[4:])
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	glog.V(8).Infof("get attr %d", inode)
@@ -900,27 +832,22 @@ func (c *MAClient) SetAttr(inode uint32, setmask uint8, mode uint16,
 	buf, err := c.doCmd(CLTOMA_FUSE_SETATTR, 0, inode, uint8(0), c.uid, 1, c.gid,
 		setmask, mode, uid, gid, atime, mtime, uint8(0))
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	if len(buf) == 5 {
 		err = c.checkBuf(buf, 0, 5)
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		err = getStatus(buf[4:])
-		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 31)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	_, fi, err = parseFileInfo(inode, buf[4:])
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	glog.V(8).Infof("set attr %d setmask %x", inode, setmask)
@@ -938,17 +865,14 @@ func (c *MAClient) Chown(inode uint32, uid, gid uint32) (fi *FileInfo, err error
 func (c *MAClient) Undel(inode uint32) (err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_UNDEL, 0, inode)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 5)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	err = getStatus(buf[4:])
 	if err != nil {
-		glog.Error(err)
 	}
 	glog.V(8).Infof("undel %d", inode)
 	return
@@ -957,17 +881,14 @@ func (c *MAClient) Undel(inode uint32) (err error) {
 func (c *MAClient) Purge(inode uint32) (err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_PURGE, 0, inode)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 5)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	err = getStatus(buf[4:])
 	if err != nil {
-		glog.Error(err)
 	}
 	glog.V(8).Infof("purge %d", inode)
 	return
@@ -987,22 +908,18 @@ type DirStats struct {
 func (c *MAClient) GetDirStats(inode uint32) (ds *DirStats, err error) {
 	buf, err := c.doCmd(CLTOMA_FUSE_GETDIRSTATS, 0, inode)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	if len(buf) == 5 {
 		err = c.checkBuf(buf, 0, 5)
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		err = getStatus(buf[4:])
-		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 60)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	var tp uint32
@@ -1026,22 +943,18 @@ func (c *MAClient) rwChunk(cmd, inode, index uint32,
 	flags uint8) (cs *CSData, err error) {
 	buf, err := c.doCmd(cmd, 0, inode, index, flags)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	if len(buf) == 5 {
 		err = c.checkBuf(buf, 0, 5)
 		if err != nil {
-			glog.Error(err)
 			return
 		}
 		err = getStatus(buf[4:])
-		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 25)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	cs = new(CSData)
@@ -1090,17 +1003,14 @@ func (c *MAClient) WriteChunkEnd(chunkId uint64, inode, index uint32,
 	buf, err := c.doCmd(CLTOMA_FUSE_WRITE_CHUNK_END, 0, chunkId, inode,
 		index, length, flags)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	err = c.checkBuf(buf, 0, 5)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	err = getStatus(buf[4:])
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	glog.V(8).Infof("end write chunk inode %d chunkId %d", inode, chunkId)

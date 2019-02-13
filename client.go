@@ -102,18 +102,17 @@ func (c *Client) lookup(path string) (parent uint32, info *FileInfo, err error) 
 	if err != nil {
 		return
 	}
+    glog.V(5).Infof("client lookup path %s -> (%s,%d)", path, p, info.Inode)
 	return
 }
 
 func (c *Client) Open(path string) (f *File, err error) {
 	_, info, err := c.lookup(path)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	err = c.mc.Open(info.Inode, 1)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	f = &File{
@@ -127,12 +126,10 @@ func (c *Client) Open(path string) (f *File, err error) {
 func (c *Client) Create(path string) (f *File, err error) {
 	_, info, err := c.lookup(filepath.Dir(path))
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	fi, err := c.mc.Create(info.Inode, filepath.Base(path), 0666)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	f = &File{
@@ -146,7 +143,6 @@ func (c *Client) Create(path string) (f *File, err error) {
 func (c *Client) Chdir(path string) (err error) {
 	_, info, err := c.lookup(path)
 	if err != nil {
-		glog.Error(err)
 		return
 	}
 	if filepath.IsAbs(path) {
