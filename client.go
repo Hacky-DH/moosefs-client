@@ -102,7 +102,7 @@ func (c *Client) lookup(path string) (parent uint32, info *FileInfo, err error) 
 	if err != nil {
 		return
 	}
-    glog.V(5).Infof("client lookup path %s -> (%s,%d)", path, p, info.Inode)
+	glog.V(5).Infof("client lookup path %s -> (%s,%d)", path, p, info.Inode)
 	return
 }
 
