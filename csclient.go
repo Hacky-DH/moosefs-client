@@ -53,7 +53,6 @@ func NewCSClient(t *CSItem) (c *CSClient, err error) {
 		conn, err = net.DialTimeout("tcp", addr, TCP_CONNECT_TIMEOUT)
 		if err == nil {
 			c.conn = conn
-			c.conn.SetDeadline(time.Now().Add(TCP_RW_TIMEOUT))
 			break
 		}
 		glog.V(8).Infof("connect chunk master error: %v retry #%d", err, i+1)
