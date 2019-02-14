@@ -273,3 +273,17 @@ func TestRWChunk(t *testing.T) {
 		c.Unlink(MFS_ROOT_ID, n)
 	})
 }
+
+func TestFileInfoSize(t *testing.T) {
+	fi := FileInfo{
+		Type: TYPE_DIRECTORY,
+		Size: 3001298,
+	}
+	if fi.GetSize() != "12.98 GiB" {
+		t.Error("unexpect")
+	}
+	fi.Type = TYPE_FILE
+	if fi.GetSize() != "3001298" {
+		t.Error("unexpect")
+	}
+}

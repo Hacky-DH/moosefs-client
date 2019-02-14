@@ -694,9 +694,43 @@ type FileInfo struct {
 }
 
 func (fi *FileInfo) String() string {
-	return fmt.Sprintf("inode %d type %d flags 0x%x mode %s uid %d gid %d size %d\n\tatime %v mtime %v ctime %v",
+	return fmt.Sprintf("inode %d type %d flags 0x%x mode %s uid %d gid %d size %s\n\tatime %v mtime %v ctime %v",
 		fi.Inode, fi.Type, fi.Flags, fi.Mode, fi.Uid,
-		fi.Gid, fi.Size, fi.ATime, fi.MTime, fi.CTime)
+		fi.Gid, fi.GetSize(), fi.ATime, fi.MTime, fi.CTime)
+}
+
+func (fi *FileInfo) GetSize() string {
+	switch fi.Type {
+	case TYPE_FILE, TYPE_TRASH, TYPE_SUSTAINED:
+		return fmt.Sprintf("%d", fi.Size)
+	case TYPE_DIRECTORY:
+		size := fi.Size
+		var unit string
+		switch {
+		case size >= 6000000:
+			size -= 6000000
+			unit = "EiB"
+		case size >= 5000000:
+			size -= 5000000
+			unit = "PiB"
+		case size >= 4000000:
+			size -= 4000000
+			unit = "TiB"
+		case size >= 3000000:
+			size -= 3000000
+			unit = "GiB"
+		case size >= 2000000:
+			size -= 2000000
+			unit = "MiB"
+		case size >= 1000000:
+			size -= 1000000
+			unit = "KiB"
+		default:
+			unit = "B"
+		}
+		return fmt.Sprintf("%.2f %s", float64(size)/float64(100), unit)
+	}
+	return "0"
 }
 
 func parseFileInfo(inode uint32, buf []byte) (size uint32,
