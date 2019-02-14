@@ -87,20 +87,15 @@ func (c *Client) lookup(path string) (parent uint32, info *FileInfo, err error) 
 		parent = MFS_ROOT_ID
 	}
 	pa := strings.Split(p, string(filepath.Separator))
-	var cur uint32
 	for _, part := range pa {
 		if len(part) == 0 {
 			continue
 		}
-		cur, err = c.mc.Lookup(parent, part)
+		info, err = c.mc.Lookup(parent, part)
 		if err != nil {
 			return
 		}
-		parent = cur
-	}
-	info, err = c.mc.GetAttr(cur)
-	if err != nil {
-		return
+		parent = info.Inode
 	}
 	glog.V(5).Infof("client lookup path %s -> (%s,%d)", path, p, info.Inode)
 	return

@@ -428,7 +428,7 @@ func (c *MAClient) Access(inode uint32, mode uint16) (err error) {
 	return
 }
 
-func (c *MAClient) Lookup(parent uint32, name string) (inode uint32, err error) {
+func (c *MAClient) Lookup(parent uint32, name string) (fi *FileInfo, err error) {
 	if err = checkInodeName(&parent, &name); err != nil {
 		return
 	}
@@ -445,11 +445,16 @@ func (c *MAClient) Lookup(parent uint32, name string) (inode uint32, err error) 
 		err = getStatus(buf[4:])
 		return
 	}
-	err = c.checkBuf(buf, 0, 8)
+	err = c.checkBuf(buf, 0, 8+27)
 	if err != nil {
 		return
 	}
+	var inode uint32
 	UnPack(buf[4:], &inode)
+	_, fi, err = parseFileInfo(inode, buf[8:])
+	if err != nil {
+		return
+	}
 	return
 }
 
