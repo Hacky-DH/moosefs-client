@@ -56,6 +56,7 @@ func NewCLient() (c *Client, err error) {
 	return NewClientFull(masterAddr, masterPsw, masterSubdir)
 }
 
+// close client, not file
 func (c *Client) Close() {
 	if c.mc != nil {
 		c.mc.CloseSession()
@@ -82,22 +83,31 @@ func (c *Client) lookup(path string) (parent uint32, info *FileInfo, err error) 
 	if err != nil {
 		return
 	}
-	parent = c.currInode
+	curr := c.currInode
 	if filepath.IsAbs(p) {
-		parent = MFS_ROOT_ID
+		curr = MFS_ROOT_ID
 	}
 	pa := strings.Split(p, string(filepath.Separator))
 	for _, part := range pa {
 		if len(part) == 0 {
 			continue
 		}
-		info, err = c.mc.Lookup(parent, part)
+		info, err = c.mc.Lookup(curr, part)
 		if err != nil {
 			return
 		}
-		parent = info.Inode
+		parent = curr
+		curr = info.Inode
 	}
-	glog.V(5).Infof("client lookup path %s -> (%s,%d)", path, p, info.Inode)
+	if info == nil && curr == MFS_ROOT_ID {
+		info, err = c.mc.GetAttr(curr)
+		if err != nil {
+			return
+		}
+		parent = curr
+	}
+	glog.V(5).Infof("client lookup path %s result: parent %d path %s inode %d",
+		path, parent, p, info.Inode)
 	return
 }
 
@@ -135,6 +145,22 @@ func (c *Client) Create(path string) (f *File, err error) {
 	return
 }
 
+func (c *Client) OpenOrCreate(path string) (f *File, err error) {
+	_, _, err = c.lookup(path)
+	if err != nil {
+		return c.Create(path)
+	}
+	return c.Open(path)
+}
+
+func (c *Client) Unlink(path string) (err error) {
+	p, _, err := c.lookup(path)
+	if err != nil {
+		return
+	}
+	return c.mc.Unlink(p, filepath.Base(path))
+}
+
 func (c *Client) Chdir(path string) (err error) {
 	_, info, err := c.lookup(path)
 	if err != nil {
@@ -163,8 +189,8 @@ const (
 	MFSHDRSIZE        = 0x2000
 )
 
-func (f *File) Length() uint64 {
-	return f.info.Size
+func (f *File) Length() string {
+	return f.info.GetSize()
 }
 
 func (f *File) Write(buf []byte, offset uint64) (n uint32, err error) {

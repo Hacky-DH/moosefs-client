@@ -20,7 +20,7 @@ func TestWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer c.Close()
-	f, err := c.Open("testwfile")
+	f, err := c.OpenOrCreate("testwfile")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,4 +28,5 @@ func TestWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	c.Unlink("testwfile")
 }

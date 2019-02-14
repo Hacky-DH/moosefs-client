@@ -455,6 +455,7 @@ func (c *MAClient) Lookup(parent uint32, name string) (fi *FileInfo, err error) 
 	if err != nil {
 		return
 	}
+	glog.V(8).Infof("lookup name %s inode %d parent %d", name, inode, parent)
 	return
 }
 
