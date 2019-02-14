@@ -169,7 +169,7 @@ func TestCreate(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = c.Open(fi.Inode, 7)
+		_, err = c.Open(fi.Inode, 7)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -253,7 +253,7 @@ func TestRWChunk(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = c.Open(fi.Inode, 7)
+		_, err = c.Open(fi.Inode, 7)
 		if err != nil {
 			t.Fatal(err)
 		}

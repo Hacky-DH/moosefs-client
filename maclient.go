@@ -792,7 +792,7 @@ readDev:
 }
 
 // flags 01 read 02 write 04
-func (c *MAClient) Open(inode uint32, flags uint8) (err error) {
+func (c *MAClient) Open(inode uint32, flags uint8) (fi *FileInfo, err error) {
 	if err = checkInodeName(&inode, nil); err != nil {
 		return
 	}
@@ -812,7 +812,7 @@ func (c *MAClient) Open(inode uint32, flags uint8) (err error) {
 	if err != nil {
 		return
 	}
-	_, _, err = parseFileInfo(inode, buf[4:])
+	_, fi, err = parseFileInfo(inode, buf[4:])
 	if err != nil {
 		return
 	}

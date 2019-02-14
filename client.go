@@ -106,7 +106,7 @@ func (c *Client) Open(path string) (f *File, err error) {
 	if err != nil {
 		return
 	}
-	err = c.mc.Open(info.Inode, 1)
+	info, err = c.mc.Open(info.Inode, 1)
 	if err != nil {
 		return
 	}
