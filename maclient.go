@@ -734,6 +734,14 @@ func (fi *FileInfo) GetSize() string {
 	return "0"
 }
 
+func (fi *FileInfo) IsDir() bool {
+	return fi.Type == TYPE_DIRECTORY
+}
+
+func (fi *FileInfo) IsFile() bool {
+	return fi.Type == TYPE_FILE
+}
+
 func parseFileInfo(inode uint32, buf []byte) (size uint32,
 	fi *FileInfo, err error) {
 	if len(buf) < 27 {

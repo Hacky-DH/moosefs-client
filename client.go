@@ -166,12 +166,16 @@ func (c *Client) Chdir(path string) (err error) {
 	if err != nil {
 		return
 	}
-	if filepath.IsAbs(path) {
-		c.Cwd = path
+	if info.IsDir() {
+		if filepath.IsAbs(path) {
+			c.Cwd = path
+		} else {
+			c.Cwd = filepath.Join(c.Cwd, path)
+		}
+		c.currInode = info.Inode
 	} else {
-		c.Cwd = filepath.Join(c.Cwd, path)
+		err = fmt.Errorf("chdir path %s is not a directory", path)
 	}
-	c.currInode = info.Inode
 	return
 }
 
