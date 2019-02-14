@@ -2,6 +2,7 @@ package mfscli
 
 import (
 	"flag"
+	"math/rand"
 	"testing"
 )
 
@@ -24,8 +25,11 @@ func TestWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = f.Write([]byte("hello mfs"), 0)
+	data := make([]byte, 0x00020000)
+	rand.Read(data)
+	_, err = f.Write(data, 0)
 	if err != nil {
+		c.Unlink("testwfile")
 		t.Fatal(err)
 	}
 	c.Unlink("testwfile")

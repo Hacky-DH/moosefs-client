@@ -41,7 +41,7 @@ type CSData struct {
 	ProtocolId uint8
 	Length     uint64
 	ChunkId    uint64
-	Version    uint64
+	Version    uint32
 	CSItems    CSItemMap
 }
 
@@ -189,6 +189,8 @@ func (d *CSData) Write(buf []byte, off uint32) (n uint32, err error) {
 			if sz > size {
 				sz = size
 			}
+			glog.V(10).Infof("csclient write block buf[%d:%d] wid %d pos %d from %d",
+				n, n+sz, wid, pos, from)
 			err = d.WriteBlock(c, wid, pos, from, buf[n:n+sz])
 			if err != nil {
 				return
@@ -235,13 +237,13 @@ func (d *CSData) WriteBlock(c *CSClient, wid uint32, blockNum, off uint16,
 	var cid uint64
 	var wrid uint32
 	var status uint8
-	UnPack(rbuf, &cid, &wrid, &status)
-	if cid != d.ChunkId || wid != wrid {
-		err = fmt.Errorf("recv from cs bad cid %d wid %d", cid, wrid)
-		return
-	}
+	UnPack(rbuf[8:], &cid, &wrid, &status)
 	if status != 0 {
 		err = fmt.Errorf("write block %s", MFSStrerror(status))
+		return
+	}
+	if cid != d.ChunkId || wid != wrid {
+		err = fmt.Errorf("recv from cs bad cid %d wid %d", cid, wrid)
 		return
 	}
 	return

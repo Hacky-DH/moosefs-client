@@ -211,6 +211,7 @@ func (f *File) Write(buf []byte, offset uint64) (n uint32, err error) {
 		if sz > size {
 			sz = size
 		}
+		glog.V(10).Infof("client write chunk buf[%d:%d] off %d", n, n+sz, off)
 		var rs uint32
 		rs, err = cs.Write(buf[n:n+sz], off)
 		if err != nil || rs != sz {
