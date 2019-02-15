@@ -200,27 +200,28 @@ func (f *File) Length() string {
 func (f *File) Write(buf []byte, offset uint64) (n uint32, err error) {
 	size := uint32(len(buf))
 	for size > 0 {
-		chindx := uint32(offset >> MFSCHUNKBITS)
-		cs, e := f.client.mc.WriteChunk(f.info.Inode, chindx, CHUNKOPFLAG_CANMODTIME)
+		chindx := uint32(offset>>MFSCHUNKBITS) + 1
+		cs, e := f.client.mc.WriteChunk(f.info.Inode, chindx, 0)
 		if e != nil {
 			err = fmt.Errorf("write chunk failed: %v", e)
 			return
 		}
 		off := uint32(offset & MFSCHUNKMASK)
-		sz := MFSCHUNKMASK - off
+		sz := MFSCHUNKSIZE - off
 		if sz > size {
 			sz = size
 		}
-		glog.V(10).Infof("client write chunk buf[%d:%d] off %d", n, n+sz, off)
+		glog.V(10).Infof("client write chunk cindex %d buf[%d:%d] off %d",
+			chindx, n, sz, off)
 		var rs uint32
-		rs, err = cs.Write(buf[n:n+sz], off)
+		rs, err = cs.Write(buf[n:n+sz], offset)
 		if err != nil || rs != sz {
 			err = fmt.Errorf("write data to chunkserver failed: %v", err)
 			return
 		}
 		length := uint64(off + sz)
 		err = f.client.mc.WriteChunkEnd(cs.ChunkId, f.info.Inode,
-			chindx, length, CHUNKOPFLAG_CANMODTIME)
+			chindx, length, 0)
 		if err != nil {
 			err = fmt.Errorf("write end chunk failed: %v", err)
 			return

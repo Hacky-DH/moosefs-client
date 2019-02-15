@@ -155,7 +155,7 @@ func (c *CSClient) Recv(buf []byte) (n int, err error) {
 	return
 }
 
-func (d *CSData) Write(buf []byte, off uint32) (n uint32, err error) {
+func (d *CSData) Write(buf []byte, off uint64) (n uint32, err error) {
 	if len(d.CSItems) == 0 {
 		err = fmt.Errorf("no chunkserver found")
 		return
@@ -177,10 +177,10 @@ func (d *CSData) Write(buf []byte, off uint32) (n uint32, err error) {
 		}
 		msg := PackCmd(CLTOCS_WRITE, css...)
 		if err = c.Send(msg); err != nil {
-			err = fmt.Errorf("send to cs error %v", err)
+			err = fmt.Errorf("send write to cs error %v", err)
 			return
 		}
-		var wid uint32
+		var wid uint32 = 1
 		pos := uint16((off & MFSCHUNKMASK) >> MFSBLOCKBITS)
 		from := uint16(off & MFSBLOCKMASK)
 		size := uint32(len(buf))
@@ -189,8 +189,8 @@ func (d *CSData) Write(buf []byte, off uint32) (n uint32, err error) {
 			if sz > size {
 				sz = size
 			}
-			glog.V(10).Infof("csclient write block buf[%d:%d] wid %d pos %d from %d",
-				n, n+sz, wid, pos, from)
+			glog.V(20).Infof("csclient write block buf[%d:%d] wid %d pos %d from %d",
+				n, sz, wid, pos, from)
 			err = d.WriteBlock(c, wid, pos, from, buf[n:n+sz])
 			if err != nil {
 				return
@@ -200,6 +200,11 @@ func (d *CSData) Write(buf []byte, off uint32) (n uint32, err error) {
 			pos += 1
 			from = 0
 			wid += 1
+		}
+		msg = PackCmd(CLTOCS_WRITE_FINISH, d.ChunkId, d.Version)
+		if err = c.Send(msg); err != nil {
+			err = fmt.Errorf("send write finish to cs error %v", err)
+			return
 		}
 		// just write to one cs
 		return

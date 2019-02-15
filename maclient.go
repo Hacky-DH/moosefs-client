@@ -87,8 +87,6 @@ func (c *MAClient) heartbeat() {
 		if err := c.Connect(); err != nil {
 			return fmt.Errorf("connect error %s", err.Error())
 		}
-		c.Lock()
-		defer c.Unlock()
 		msg := PackCmd(ANTOAN_NOP, 0)
 		if err := c.Send(msg); err != nil {
 			return fmt.Errorf("connect error %s", err.Error())
@@ -155,12 +153,19 @@ func (c *MAClient) doCmd(cmd uint32, args ...interface{}) (r []byte, err error) 
 			return
 		}
 		read(bytes.NewBuffer(buf), &rcmd, &size)
+		glog.V(10).Infof("command %d rcmd %d size %d", cmd, rcmd, size)
+		if rcmd == ANTOAN_NOP && size == 4 {
+			_, err = c.Recv(buf[:4])
+			if err != nil {
+				err = fmt.Errorf("cmd recv error %s", err.Error())
+				return
+			}
+		}
 	}
 	if rcmd != cmd+1 {
 		err = fmt.Errorf("mfs master cmd %d bad answer rcmd %d", cmd, rcmd)
 		return
 	}
-	glog.V(10).Infof("command %d size %d", cmd, size)
 	if size > 0 {
 		buf = make([]byte, size)
 		if _, err = c.Recv(buf); err != nil {
