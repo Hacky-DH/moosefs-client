@@ -1148,3 +1148,38 @@ func (c *MAClient) Symlink(parent uint32, name string, path string,
 		name, inode, parent, path)
 	return
 }
+
+func (c *MAClient) Link(inode, inodeDst uint32, nameDst string,
+) (fi *FileInfo, err error) {
+	if err = checkInodeName(&inode, nil); err != nil {
+		return
+	}
+	if err = checkInodeName(&inodeDst, &nameDst); err != nil {
+		return
+	}
+	buf, err := c.doCmd(CLTOMA_FUSE_LINK, 0, inode, inodeDst,
+		uint8(len(nameDst)), nameDst, c.uid, 1, c.gid)
+	if err != nil {
+		return
+	}
+	if len(buf) == 5 {
+		err = c.checkBuf(buf, 0, 5)
+		if err != nil {
+			return
+		}
+		err = getStatus(buf[4:])
+		return
+	}
+	err = c.checkBuf(buf, 0, 35)
+	if err != nil {
+		return
+	}
+	UnPack(buf[4:], &inode)
+	_, fi, err = parseFileInfo(inode, buf[8:])
+	if err != nil {
+		return
+	}
+	glog.V(8).Infof("link inode %d inode dst %d name dst %s",
+		inode, inodeDst, nameDst)
+	return
+}
