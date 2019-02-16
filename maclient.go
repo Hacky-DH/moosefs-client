@@ -1183,3 +1183,34 @@ func (c *MAClient) Link(inode, inodeDst uint32, nameDst string,
 		inode, inodeDst, nameDst)
 	return
 }
+
+func (c *MAClient) ReadLink(inode uint32) (path string, err error) {
+	if err = checkInodeName(&inode, nil); err != nil {
+		return
+	}
+	buf, err := c.doCmd(CLTOMA_FUSE_READLINK, 0, inode)
+	if err != nil {
+		return
+	}
+	if len(buf) == 5 {
+		err = c.checkBuf(buf, 0, 5)
+		if err != nil {
+			return
+		}
+		err = getStatus(buf[4:])
+		return
+	}
+	err = c.checkBuf(buf, 0, 8)
+	if err != nil {
+		return
+	}
+	var length uint32
+	UnPack(buf[4:], &length)
+	if uint32(len(buf)) != length+8 {
+		err = fmt.Errorf("got wrong size %d from mfsmaster", len(buf))
+		return
+	}
+	path = string(buf[8:])
+	glog.V(8).Infof("read link inode %d path %s", inode, path)
+	return
+}
