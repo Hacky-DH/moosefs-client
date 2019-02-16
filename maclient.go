@@ -1115,3 +1115,36 @@ func (c *MAClient) WriteChunkEnd(chunkId uint64, inode, index uint32,
 	glog.V(8).Infof("end write chunk inode %d chunkId %d", inode, chunkId)
 	return
 }
+
+func (c *MAClient) Symlink(parent uint32, name string, path string,
+) (fi *FileInfo, err error) {
+	if err = checkInodeName(&parent, &name); err != nil {
+		return
+	}
+	buf, err := c.doCmd(CLTOMA_FUSE_SYMLINK, 0, parent, uint8(len(name)),
+		name, uint32(len(path)), path, c.uid, 1, c.gid)
+	if err != nil {
+		return
+	}
+	if len(buf) == 5 {
+		err = c.checkBuf(buf, 0, 5)
+		if err != nil {
+			return
+		}
+		err = getStatus(buf[4:])
+		return
+	}
+	err = c.checkBuf(buf, 0, 35)
+	if err != nil {
+		return
+	}
+	var inode uint32
+	UnPack(buf[4:], &inode)
+	_, fi, err = parseFileInfo(inode, buf[8:])
+	if err != nil {
+		return
+	}
+	glog.V(8).Infof("symlink name %s inode %d parent %d path %s",
+		name, inode, parent, path)
+	return
+}
