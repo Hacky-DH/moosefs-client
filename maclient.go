@@ -1214,3 +1214,38 @@ func (c *MAClient) ReadLink(inode uint32) (path string, err error) {
 	glog.V(8).Infof("read link inode %d path %s", inode, path)
 	return
 }
+
+func (c *MAClient) Rename(inodeSrc uint32, nameSrc string, inodeDst uint32,
+	nameDst string) (fi *FileInfo, err error) {
+	if err = checkInodeName(&inodeSrc, &nameSrc); err != nil {
+		return
+	}
+	if err = checkInodeName(&inodeDst, &nameDst); err != nil {
+		return
+	}
+	buf, err := c.doCmd(CLTOMA_FUSE_RENAME, 0, inodeSrc, uint8(len(nameSrc)),
+		nameSrc, inodeDst, uint8(len(nameDst)), nameDst, c.uid, 1, c.gid)
+	if err != nil {
+		return
+	}
+	if len(buf) == 5 {
+		err = c.checkBuf(buf, 0, 5)
+		if err != nil {
+			return
+		}
+		err = getStatus(buf[4:])
+		return
+	}
+	err = c.checkBuf(buf, 0, 35)
+	if err != nil {
+		return
+	}
+	UnPack(buf[4:], &inodeSrc)
+	_, fi, err = parseFileInfo(inodeSrc, buf[8:])
+	if err != nil {
+		return
+	}
+	glog.V(8).Infof("rename inode %d from %s to %s",
+		inodeSrc, nameSrc, nameDst)
+	return
+}
