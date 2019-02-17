@@ -1249,3 +1249,32 @@ func (c *MAClient) Rename(inodeSrc uint32, nameSrc string, inodeDst uint32,
 		inodeSrc, nameSrc, nameDst)
 	return
 }
+
+// msgid:32 inode:32 flags:8 uid:32 gcnt:32 gcnt * [ gid:32 ] length:64 (version >= 2.0.89/3.0.25)
+func (c *MAClient) Truncate(inode uint32, flags uint8) (fi *FileInfo, err error) {
+	if err = checkInodeName(&inode, nil); err != nil {
+		return
+	}
+	buf, err := c.doCmd(CLTOMA_FUSE_TRUNCATE, 0, inode, flags, c.uid, 1, c.gid)
+	if err != nil {
+		return
+	}
+	if len(buf) == 5 {
+		err = c.checkBuf(buf, 0, 5)
+		if err != nil {
+			return
+		}
+		err = getStatus(buf[4:])
+		return
+	}
+	err = c.checkBuf(buf, 0, 31)
+	if err != nil {
+		return
+	}
+	_, fi, err = parseFileInfo(inode, buf[4:])
+	if err != nil {
+		return
+	}
+	glog.V(8).Infof("truncate %d", inode)
+	return
+}
