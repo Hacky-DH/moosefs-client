@@ -254,16 +254,16 @@ func (f *File) Read(buf []byte, offset uint64) (n uint32, err error) {
 			sz = size
 		}
 		glog.V(10).Infof("client read chunk cindex %d buf[%d:%d] off %d",
-			chindx, n, sz, offset)
+			chindx, n, sz, off)
 		var rs uint32
-		rs, err = cs.Read(buf[n:n+sz], offset)
+		rs, err = cs.Read(buf[n:n+sz], uint64(off))
 		if err != nil || rs != sz {
 			err = fmt.Errorf("read data from chunkserver failed: %v", err)
 			return
 		}
 		size -= sz
 		n += sz
-		offset = 0
+		offset += uint64(sz)
 	}
 	return
 }
@@ -382,7 +382,11 @@ func (c *Client) ReadFile(path, localPath string) (err error) {
 	var wn int
 	var off uint64
 	for {
-		n, err = file.Read(buf, off)
+		sz := MFSCHUNKSIZE - (off & MFSCHUNKMASK)
+		if sz > (file.info.Size - off) {
+			sz = file.info.Size - off
+		}
+		n, err = file.Read(buf[:sz], off)
 		if err != nil {
 			return
 		}
@@ -394,6 +398,7 @@ func (c *Client) ReadFile(path, localPath string) (err error) {
 			return
 		}
 		off += uint64(wn)
+		glog.Infof("read percent %.2f%%", float64(off*100)/float64(file.info.Size))
 		if off >= file.info.Size {
 			break
 		}
