@@ -34,3 +34,21 @@ func TestWrite(t *testing.T) {
 	}
 	c.Unlink("testwfile")
 }
+
+func TestReadData(t *testing.T) {
+	t.Skip()
+	c, err := NewCLient()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	f, err := c.Open("testrfile")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := make([]byte, 0x08000000)
+	_, err = f.Read(data, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+}

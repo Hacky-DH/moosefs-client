@@ -232,3 +232,37 @@ func (f *File) Write(buf []byte, offset uint64) (n uint32, err error) {
 	}
 	return
 }
+
+func (f *File) Read(buf []byte, offset uint64) (n uint32, err error) {
+	if offset >= f.info.Size {
+		err = fmt.Errorf("read offset is longer than file length")
+		return
+	}
+	size := uint32(len(buf))
+	glog.V(10).Infof("client read file size %d offset %d", f.info.Size, offset)
+	for size > 0 {
+		chindx := uint32(offset >> MFSCHUNKBITS)
+		cs, e := f.client.mc.ReadChunk(f.info.Inode, chindx, 0)
+		if e != nil {
+			err = fmt.Errorf("read chunk failed: %v", e)
+			return
+		}
+		off := uint32(offset & MFSCHUNKMASK)
+		sz := MFSCHUNKSIZE - off
+		if sz > size {
+			sz = size
+		}
+		glog.V(10).Infof("client read chunk cindex %d buf[%d:%d] off %d",
+			chindx, n, sz, offset)
+		var rs uint32
+		rs, err = cs.Read(buf[n:n+sz], offset)
+		if err != nil || rs != sz {
+			err = fmt.Errorf("read data from chunkserver failed: %v", err)
+			return
+		}
+		size -= sz
+		n += sz
+		offset = 0
+	}
+	return
+}

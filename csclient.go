@@ -253,3 +253,134 @@ func (d *CSData) WriteBlock(c *CSClient, wid uint32, blockNum, off uint16,
 	}
 	return
 }
+func (d *CSData) Read(buf []byte, off uint64) (n uint32, err error) {
+	if len(d.CSItems) == 0 {
+		err = fmt.Errorf("no chunkserver found")
+		return
+	}
+	for _, cs := range d.CSItems {
+		var c *CSClient
+		c, err = _cspool.Get(cs)
+		if err != nil {
+			return
+		}
+		msg := PackCmd(CLTOCS_READ, d.ProtocolId, d.ChunkId, d.Version,
+			uint32(off), uint32(len(buf)))
+		if err = c.Send(msg); err != nil {
+			err = fmt.Errorf("send read to cs error %v", err)
+			continue
+		}
+		from := uint16(off & MFSBLOCKMASK)
+		size := uint32(len(buf))
+		var rs uint32
+		for size > 0 {
+			sz := MFSBLOCKSIZE - uint32(from)
+			if sz > size {
+				sz = size
+			}
+			rs, err = d.ReadBlock(c, buf[n:n+sz], off)
+			if err != nil {
+				break
+			}
+			if rs != sz {
+				continue
+			}
+			size -= sz
+			n += sz
+			from = 0
+			off += uint64(sz)
+		}
+		if err == nil {
+			return
+		}
+	}
+	return
+}
+
+func (d *CSData) ReadBlock(c *CSClient, buf []byte, off uint64) (n uint32, err error) {
+	read := func(sz uint32) (rbuf []byte, err error) {
+		rbuf = make([]byte, sz)
+		if _, err = c.Recv(rbuf); err != nil {
+			err = fmt.Errorf("read block recv from cs error %v", err)
+			return
+		}
+		return
+	}
+	rbuf, err := read(8)
+	if err != nil {
+		return
+	}
+	var cmd, sz uint32
+	UnPack(rbuf, &cmd, &sz)
+	if cmd == CSTOCL_READ_STATUS {
+		if sz != 9 {
+			err = fmt.Errorf("read block status wrong sizei %d!=9", sz)
+			return
+		}
+		rbuf, err = read(sz)
+		if err != nil {
+			return
+		}
+		var cid uint64
+		var status uint8
+		UnPack(rbuf, &cid, &status)
+		if status != 0 {
+			err = fmt.Errorf("read block status error %s", MFSStrerror(status))
+			return
+		}
+		if cid != d.ChunkId {
+			err = fmt.Errorf("read block status wrong cid %d!=%d", cid, d.ChunkId)
+			return
+		}
+		glog.V(10).Infof("read block status ok")
+	} else if cmd == CSTOCL_READ_DATA {
+		if sz < 20 {
+			err = fmt.Errorf("read block data wrong size %d<20", sz)
+			return
+		}
+		rbuf, err = read(20)
+		if err != nil {
+			return
+		}
+		var cid uint64
+		var rpos, roff uint16
+		var rsz, crc uint32
+		UnPack(rbuf, &cid, &rpos, &roff, &rsz, &crc)
+		if cid != d.ChunkId {
+			err = fmt.Errorf("read block data wrong cid %d!=%d", cid, d.ChunkId)
+			return
+		}
+		if rsz != uint32(len(buf)) {
+			err = fmt.Errorf("read block data wrong size %d!=%d", rsz, len(buf))
+			return
+		}
+		if sz != 20+rsz {
+			err = fmt.Errorf("read block data wrong size %d!=20+%d", sz, rsz)
+			return
+		}
+		pos := uint16((off & MFSCHUNKMASK) >> MFSBLOCKBITS)
+		if pos != rpos {
+			err = fmt.Errorf("read block data wrong pos %d!=%d", pos, rpos)
+			return
+		}
+		offset := uint16(off & MFSBLOCKMASK)
+		if offset != roff {
+			err = fmt.Errorf("read block data wrong off %d!=%d", offset, roff)
+			return
+		}
+		rbuf, err = read(rsz)
+		if err != nil {
+			return
+		}
+		ccrc := crc32.ChecksumIEEE(rbuf)
+		if ccrc != crc {
+			err = fmt.Errorf("read block data wrong crc %d!=%d", crc, ccrc)
+			return
+		}
+		copy(buf, rbuf)
+		n = rsz
+	} else {
+		err = fmt.Errorf("read block unknown rcmd %d", cmd)
+	}
+	return
+}
