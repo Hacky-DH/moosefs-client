@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/golang/glog"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -116,7 +117,7 @@ func (c *Client) Open(path string) (f *File, err error) {
 	if err != nil {
 		return
 	}
-	info, err = c.mc.Open(info.Inode, 1)
+	info, err = c.mc.Open(info.Inode, 3)
 	if err != nil {
 		return
 	}
@@ -323,4 +324,84 @@ func (c *Client) Chown(path string, uid, gid uint32) (fi *FileInfo, err error) {
 		return
 	}
 	return c.mc.Chown(info.Inode, uid, gid)
+}
+
+// write local file to mfs
+func (c *Client) WriteFile(localPath, path string) (err error) {
+	f, err := os.Open(localPath)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	info, err := os.Stat(localPath)
+	if err != nil {
+		return
+	}
+	size := uint64(info.Size())
+	file, err := c.OpenOrCreate(path)
+	if err != nil {
+		return
+	}
+	buf := make([]byte, MFSCHUNKSIZE)
+	var n int
+	var wn uint32
+	var off uint64
+	for {
+		n, err = f.Read(buf)
+		if err != nil {
+			return
+		}
+		if n <= 0 {
+			break
+		}
+		wn, err = file.Write(buf[:n], off)
+		if err != nil {
+			return
+		}
+		off += uint64(wn)
+		if off >= size {
+			break
+		}
+	}
+	glog.V(5).Infof("write file %s to mfs %s size %d", localPath, path, off)
+	return
+}
+
+// read mfs file to local file
+func (c *Client) ReadFile(path, localPath string) (err error) {
+	dst, err := os.Create(localPath)
+	if err != nil {
+		return
+	}
+	file, err := c.Open(path)
+	if err != nil {
+		return
+	}
+	buf := make([]byte, MFSCHUNKSIZE)
+	var n uint32
+	var wn int
+	var off uint64
+	for {
+		n, err = file.Read(buf, off)
+		if err != nil {
+			return
+		}
+		if n <= 0 {
+			break
+		}
+		wn, err = dst.Write(buf[:n])
+		if err != nil {
+			return
+		}
+		off += uint64(wn)
+		if off >= file.info.Size {
+			break
+		}
+	}
+	err = dst.Close()
+	if err != nil {
+		return
+	}
+	glog.V(5).Infof("read mfs %s to local file %s size %d", path, localPath, off)
+	return
 }

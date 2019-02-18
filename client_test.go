@@ -1,8 +1,10 @@
 package mfscli
 
 import (
+	"crypto/md5"
 	"flag"
 	"math/rand"
+	"os"
 	"testing"
 )
 
@@ -73,4 +75,53 @@ func TestDir(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+}
+
+func TestWriteReadFile(t *testing.T) {
+	t.Skip()
+	c, err := NewCLient()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	data := make([]byte, 0x04500000)
+	rand.Read(data)
+	lname := "/tmp/wrfilename889"
+	rname := "/wrfilename889"
+	wmd5 := md5.Sum(data)
+	f, err := os.Create(lname)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = f.Write(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
+	err = c.WriteFile(lname, rname)
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Remove(lname)
+	//read
+	err = c.ReadFile(rname, lname)
+	if err != nil {
+		c.Unlink(rname)
+		t.Fatal(err)
+	}
+	c.Unlink(rname)
+	f, err = os.Open(lname)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data = make([]byte, 0x04500000)
+	_, err = f.Read(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
+	if wmd5 != md5.Sum(data) {
+		t.Fatal("md5 is not equal")
+	}
+	os.Remove(lname)
 }
