@@ -300,3 +300,27 @@ func (c *Client) Readdir(path string) (infoMap ReaddirInfoMap, err error) {
 	}
 	return c.mc.Readdir(info.Inode)
 }
+
+func (c *Client) GetDirStats(path string) (ds *DirStats, err error) {
+	_, info, err := c.lookup(path)
+	if err != nil {
+		return
+	}
+	return c.mc.GetDirStats(info.Inode)
+}
+
+func (c *Client) Chmod(path string, mode uint16) (fi *FileInfo, err error) {
+	_, info, err := c.lookup(path)
+	if err != nil {
+		return
+	}
+	return c.mc.Chmod(info.Inode, mode)
+}
+
+func (c *Client) Chown(path string, uid, gid uint32) (fi *FileInfo, err error) {
+	_, info, err := c.lookup(path)
+	if err != nil {
+		return
+	}
+	return c.mc.Chown(info.Inode, uid, gid)
+}
