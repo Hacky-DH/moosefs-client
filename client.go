@@ -266,3 +266,37 @@ func (f *File) Read(buf []byte, offset uint64) (n uint32, err error) {
 	}
 	return
 }
+
+func (c *Client) Mkdir(path string) (err error) {
+	_, info, err := c.lookup(path)
+	if err == nil {
+		// already exists
+		return
+	}
+	_, info, err = c.lookup(filepath.Dir(path))
+	if err != nil {
+		// parent dir is not exists
+		return
+	}
+	_, err = c.mc.Mkdir(info.Inode, filepath.Base(path), 0755)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func (c *Client) Rmdir(path string) (err error) {
+	p, _, err := c.lookup(path)
+	if err != nil {
+		return
+	}
+	return c.mc.Rmdir(p, filepath.Base(path))
+}
+
+func (c *Client) Readdir(path string) (infoMap ReaddirInfoMap, err error) {
+	_, info, err := c.lookup(path)
+	if err != nil {
+		return
+	}
+	return c.mc.Readdir(info.Inode)
+}

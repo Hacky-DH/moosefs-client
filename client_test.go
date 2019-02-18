@@ -52,3 +52,25 @@ func TestReadData(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestDir(t *testing.T) {
+	t.Skip()
+	c, err := NewCLient()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	d := "testdir888"
+	err = c.Mkdir(d)
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = c.Readdir(d)
+	if err != nil {
+		t.Error(err)
+	}
+	err = c.Rmdir(d)
+	if err != nil {
+		t.Error(err)
+	}
+}
