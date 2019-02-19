@@ -201,7 +201,7 @@ func (f *File) Length() string {
 func (f *File) Write(buf []byte, offset uint64) (n uint32, err error) {
 	size := uint32(len(buf))
 	for size > 0 {
-		chindx := uint32(offset>>MFSCHUNKBITS) + 1
+		chindx := uint32(offset >> MFSCHUNKBITS)
 		cs, e := f.client.mc.WriteChunk(f.info.Inode, chindx, 0)
 		if e != nil {
 			err = fmt.Errorf("write chunk failed: %v", e)
