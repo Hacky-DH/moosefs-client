@@ -370,11 +370,11 @@ func (c *Client) WriteFile(localPath, path string) (err error) {
 
 // read mfs file to local file
 func (c *Client) ReadFile(path, localPath string) (err error) {
-	dst, err := os.Create(localPath)
+	file, err := c.Open(path)
 	if err != nil {
 		return
 	}
-	file, err := c.Open(path)
+	dst, err := os.Create(localPath)
 	if err != nil {
 		return
 	}
