@@ -107,7 +107,7 @@ func (c *Client) lookup(path string) (parent uint32, info *FileInfo, err error) 
 		}
 		parent = curr
 	}
-	glog.V(5).Infof("client lookup path %s result: parent %d path %s inode %d",
+	glog.V(8).Infof("client lookup path %s result: parent %d path %s inode %d",
 		path, parent, p, info.Inode)
 	return
 }
@@ -359,6 +359,7 @@ func (c *Client) WriteFile(localPath, path string) (err error) {
 			return
 		}
 		off += uint64(wn)
+		glog.Infof("write file percent %.2f%%", float64(off*100)/float64(size))
 		if off >= size {
 			break
 		}
@@ -398,7 +399,8 @@ func (c *Client) ReadFile(path, localPath string) (err error) {
 			return
 		}
 		off += uint64(wn)
-		glog.Infof("read percent %.2f%%", float64(off*100)/float64(file.info.Size))
+		glog.Infof("read file percent %.2f%%",
+			float64(off*100)/float64(file.info.Size))
 		if off >= file.info.Size {
 			break
 		}
