@@ -53,7 +53,7 @@ func NewClientFull(addr, password, subDir string) (c *Client, err error) {
 	return
 }
 
-func NewCLient() (c *Client, err error) {
+func NewClient() (c *Client, err error) {
 	return NewClientFull(masterAddr, masterPsw, masterSubdir)
 }
 

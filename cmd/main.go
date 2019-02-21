@@ -40,7 +40,7 @@ func (s *uploadCmd) Execute(_ context.Context, f *flag.FlagSet,
 		f.Usage()
 		return subcommands.ExitUsageError
 	}
-	c, err := mfs.NewCLient()
+	c, err := mfs.NewClient()
 	if err != nil {
 		glog.Error(err)
 		return subcommands.ExitFailure
@@ -76,7 +76,7 @@ func (s *downloadCmd) Execute(_ context.Context, f *flag.FlagSet,
 		f.Usage()
 		return subcommands.ExitUsageError
 	}
-	c, err := mfs.NewCLient()
+	c, err := mfs.NewClient()
 	if err != nil {
 		glog.Error(err)
 		return subcommands.ExitFailure
@@ -107,7 +107,7 @@ func (s *lsCmd) SetFlags(f *flag.FlagSet) {
 }
 func (s *lsCmd) Execute(_ context.Context, f *flag.FlagSet,
 	_ ...interface{}) subcommands.ExitStatus {
-	c, err := mfs.NewCLient()
+	c, err := mfs.NewClient()
 	if err != nil {
 		glog.Error(err)
 		return subcommands.ExitFailure
@@ -159,7 +159,7 @@ func (s *removeCmd) Execute(_ context.Context, f *flag.FlagSet,
 		f.Usage()
 		return subcommands.ExitUsageError
 	}
-	c, err := mfs.NewCLient()
+	c, err := mfs.NewClient()
 	if err != nil {
 		glog.Error(err)
 		return subcommands.ExitFailure
@@ -191,7 +191,7 @@ func (s *mkdirCmd) Execute(_ context.Context, f *flag.FlagSet,
 		f.Usage()
 		return subcommands.ExitUsageError
 	}
-	c, err := mfs.NewCLient()
+	c, err := mfs.NewClient()
 	if err != nil {
 		glog.Error(err)
 		return subcommands.ExitFailure
@@ -223,7 +223,7 @@ func (s *rmdirCmd) Execute(_ context.Context, f *flag.FlagSet,
 		f.Usage()
 		return subcommands.ExitUsageError
 	}
-	c, err := mfs.NewCLient()
+	c, err := mfs.NewClient()
 	if err != nil {
 		glog.Error(err)
 		return subcommands.ExitFailure

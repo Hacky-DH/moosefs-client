@@ -18,7 +18,7 @@ func init() {
 
 func TestWrite(t *testing.T) {
 	t.Skip()
-	c, err := NewCLient()
+	c, err := NewClient()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestWrite(t *testing.T) {
 
 func TestReadData(t *testing.T) {
 	t.Skip()
-	c, err := NewCLient()
+	c, err := NewClient()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestReadData(t *testing.T) {
 
 func TestDir(t *testing.T) {
 	t.Skip()
-	c, err := NewCLient()
+	c, err := NewClient()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func TestDir(t *testing.T) {
 
 func TestWriteReadFile(t *testing.T) {
 	t.Skip()
-	c, err := NewCLient()
+	c, err := NewClient()
 	if err != nil {
 		t.Fatal(err)
 	}
