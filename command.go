@@ -1,5 +1,11 @@
 package mfscli
 
+/*
+MIT License
+
+Copyright (c) 2019 DHacky
+*/
+
 import "time"
 
 const TCP_RETRY_TIMES = 3

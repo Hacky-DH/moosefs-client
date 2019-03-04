@@ -1,5 +1,11 @@
 package mfscli
 
+/*
+MIT License
+
+Copyright (c) 2019 DHacky
+*/
+
 import (
 	"flag"
 	"testing"
