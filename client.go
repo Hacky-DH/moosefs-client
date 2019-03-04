@@ -45,6 +45,7 @@ func NewClientFull(addr, password, subDir string) (c *Client, err error) {
 		Cwd:       "/",
 		currInode: MFS_ROOT_ID,
 	}
+	// the default Subdir is /
 	if len(subDir) > 0 {
 		if !filepath.IsAbs(subDir) {
 			subDir = filepath.Join(string(filepath.Separator), subDir)
@@ -72,6 +73,7 @@ func (c *Client) Close() {
 	}
 }
 
+// check master connection and the length of path
 func (c *Client) check(path string) (p string, err error) {
 	if c.mc == nil {
 		err = fmt.Errorf("client is closed")
@@ -85,6 +87,8 @@ func (c *Client) check(path string) (p string, err error) {
 	return
 }
 
+// path based lookup
+// if success, parent is parent inode of path
 func (c *Client) lookup(path string) (parent uint32, info *FileInfo, err error) {
 	p, err := c.check(path)
 	if err != nil {
@@ -123,6 +127,7 @@ func (c *Client) Open(path string) (f *File, err error) {
 	if err != nil {
 		return
 	}
+	// open for read and write  fix me! add flag
 	info, err = c.mc.Open(info.Inode, 3)
 	if err != nil {
 		return
@@ -204,6 +209,7 @@ func (f *File) Length() string {
 	return f.info.GetSize()
 }
 
+// write one chunk by one
 func (f *File) Write(buf []byte, offset uint64) (n uint32, err error) {
 	size := uint32(len(buf))
 	for size > 0 {
@@ -240,6 +246,7 @@ func (f *File) Write(buf []byte, offset uint64) (n uint32, err error) {
 	return
 }
 
+// read one chunk by one
 func (f *File) Read(buf []byte, offset uint64) (n uint32, err error) {
 	if offset >= f.info.Size {
 		err = fmt.Errorf("read offset is longer than file length")

@@ -23,11 +23,13 @@ type CSClient struct {
 	Version
 }
 
+// chunk server client connection pool
 type CSPool struct {
 	pool map[string][]*CSClient
 	sync.Mutex
 }
 
+// a chunk server info
 type CSItem struct {
 	Ip        uint32
 	Port      uint16
@@ -161,6 +163,7 @@ func (c *CSClient) Recv(buf []byte) (n int, err error) {
 	return
 }
 
+// write one block by one
 func (d *CSData) Write(buf []byte, off uint64) (n uint32, err error) {
 	if len(d.CSItems) == 0 {
 		err = fmt.Errorf("no chunkserver found")
@@ -259,6 +262,8 @@ func (d *CSData) WriteBlock(c *CSClient, wid uint32, blockNum, off uint16,
 	}
 	return
 }
+
+// read one block by one
 func (d *CSData) Read(buf []byte, off uint64) (n uint32, err error) {
 	if len(d.CSItems) == 0 {
 		err = fmt.Errorf("no chunkserver found")

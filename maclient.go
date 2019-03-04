@@ -811,7 +811,7 @@ readDev:
 	return
 }
 
-// flags 01 read 02 write 04
+// flags 01 read 02 write 04 fix me!
 func (c *MAClient) Open(inode uint32, flags uint8) (fi *FileInfo, err error) {
 	if err = checkInodeName(&inode, nil); err != nil {
 		return

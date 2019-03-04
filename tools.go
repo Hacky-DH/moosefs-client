@@ -11,6 +11,7 @@ import (
 	"github.com/golang/glog"
 )
 
+// tool is querying information from mfs
 func NewTools(addr string) *MAClient {
 	return NewMAClientPwd(addr, "", false)
 }
