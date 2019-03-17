@@ -122,13 +122,12 @@ func (c *Client) lookup(path string) (parent uint32, info *FileInfo, err error) 
 	return
 }
 
-func (c *Client) Open(path string) (f *File, err error) {
+func (c *Client) Open(path string, flags uint8) (f *File, err error) {
 	_, info, err := c.lookup(path)
 	if err != nil {
 		return
 	}
-	// open for read and write  fix me! add flag
-	info, err = c.mc.Open(info.Inode, 3)
+	info, err = c.mc.Open(info.Inode, flags)
 	if err != nil {
 		return
 	}
@@ -162,7 +161,7 @@ func (c *Client) OpenOrCreate(path string) (f *File, err error) {
 	if err != nil {
 		return c.Create(path)
 	}
-	return c.Open(path)
+	return c.Open(path, WANT_READ|WANT_WRITE)
 }
 
 func (c *Client) Unlink(path string) (err error) {
@@ -383,7 +382,7 @@ func (c *Client) WriteFile(localPath, path string) (err error) {
 
 // read mfs file to local file
 func (c *Client) ReadFile(path, localPath string) (err error) {
-	file, err := c.Open(path)
+	file, err := c.Open(path, WANT_READ)
 	if err != nil {
 		return
 	}

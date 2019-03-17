@@ -50,7 +50,7 @@ func TestReadData(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer c.Close()
-	f, err := c.Open("testrfile")
+	f, err := c.Open("testrfile", WANT_READ)
 	if err != nil {
 		t.Fatal(err)
 	}
